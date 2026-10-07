@@ -192,10 +192,6 @@ picture { display:block; height:100%; }
 .facts b { font:600 1.75rem/1.1 var(--font-display); font-variant-numeric:lining-nums tabular-nums; }
 .facts span { color:var(--cream-300); font-size:var(--fs-small); }
 @media (min-width:768px){ .facts__list { grid-template-columns:repeat(4,1fr); } .facts b { font-size:2.25rem; } }
-.benefit--key { background:var(--ink-900); color:var(--cream-50); }
-.benefit--key svg { stroke:var(--cream-50); }
-.benefit--key span { color:var(--cream-300); }
-
 /* pair: video with size tags */
 .pair__photo--video video { position:absolute; inset:0; }
 .pair__tags { position:absolute; left:var(--sp-3); right:var(--sp-3); bottom:var(--sp-3); display:flex; flex-wrap:wrap; gap:var(--sp-2); padding-right:56px; }
