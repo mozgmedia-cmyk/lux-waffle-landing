@@ -95,7 +95,7 @@
         state.cities = new Map(list.map(a => [a.Present, { label: a.Present, ref: a.DeliveryCity }]));
         state.npDown = false;
         if (list.length) cityBox.render([...state.cities.keys()]); else cityBox.status('Нічого не знайдено. Перевірте назву.');
-      } catch (_) { state.npDown = true; cityBox.close(); setHint('h-city', 'Не вдалося завантажити список міст. Введіть місто вручну.'); }
+      } catch (_) { state.npDown = true; cityBox.close(); setHint('h-city', 'Не вдалося завантажити список. Введіть населений пункт вручну.'); }
     }, 150);
   });
 
@@ -118,7 +118,7 @@
 
   function resetWarehouse() {
     whReq++; state.whs = new Map(); whBox.close();
-    whIn.value = ''; whIn.disabled = true; whIn.placeholder = 'Спершу оберіть місто';
+    whIn.value = ''; whIn.disabled = true; whIn.placeholder = 'Спершу оберіть населений пункт';
   }
   async function selectCity(c) {
     if (state.city && state.city.ref === c.ref) return;
@@ -147,7 +147,7 @@
   const fields = [
     ['name', '#f-name', '#e-name', v => v.trim() ? '' : 'Вкажіть ім’я'],
     ['phone', '#f-phone', '#e-phone', v => v.replace(/\D/g, '').length >= 10 ? '' : 'Введіть повний номер телефону'],
-    ['city', '#f-city', '#e-city', v => (state.cities.has(v.trim()) || (state.npDown && v.trim())) ? '' : 'Оберіть місто зі списку підказок'],
+    ['city', '#f-city', '#e-city', v => (state.cities.has(v.trim()) || (state.npDown && v.trim())) ? '' : 'Оберіть населений пункт зі списку підказок'],
     ['warehouse', '#f-wh', '#e-wh', v => (state.whs.has(v.trim()) || (state.npDown && v.trim())) ? '' : 'Оберіть відділення зі списку підказок'],
   ];
   const setErr = (inp, err, msg) => {
@@ -156,23 +156,40 @@
   };
   fields.forEach(([, i, e, rule]) => { const inp = $(i); inp.addEventListener('blur', () => { if (inp.value || inp.getAttribute('aria-invalid') === 'true') setErr(inp, $(e), rule(inp.value)); }); });
 
-  $('#form').addEventListener('submit', ev => {
+  const ORDER_URL = window.ORDER_ENDPOINT || 'https://ddcpkmawqbplzkyyxjhr.supabase.co/functions/v1/luxwaffle-order';
+  let sending = false;
+  $('#form').addEventListener('submit', async ev => {
     ev.preventDefault();
-    const msgBox = $('#form-msg'); msgBox.className = 'form-msg'; let first = null;
-    fields.forEach(([, i, e, rule]) => { const inp = $(i), m = inp.disabled ? 'Спершу оберіть місто' : rule(inp.value); setErr(inp, $(e), m); if (m && !first) first = inp; });
+    if (sending) return;
+    const msgBox = $('#form-msg'), btn = $('#submit'); msgBox.className = 'form-msg'; let first = null;
+    fields.forEach(([, i, e, rule]) => { const inp = $(i), m = inp.disabled ? 'Спершу оберіть населений пункт' : rule(inp.value); setErr(inp, $(e), m); if (m && !first) first = inp; });
     const noItems = !sets();
     msgBox.hidden = !noItems; msgBox.textContent = noItems ? 'Оберіть хоча б один колір вище.' : '';
     if (noItems && !first) { $('#swatches').scrollIntoView(); return; }
     if (first) { first.focus(); return; }
     const order = {
       name: $('#f-name').value.trim(), phone: $('#f-phone').value.trim(),
-      city: state.city && state.city.label || cityIn.value.trim(), cityRef: state.city && state.city.ref,
-      warehouse: whIn.value.trim(), warehouseRef: (state.whs.get(whIn.value.trim()) || {}).ref,
-      items: COLORS.map((n, i) => [n, qty[i]]).filter(x => x[1]), total: sets() * PRICE,
+      city: state.city && state.city.label || cityIn.value.trim(),
+      warehouse: whIn.value.trim(),
+      items: COLORS.map((n, i) => [n, qty[i]]).filter(x => x[1]),
+      website: $('#f-website').value,
     };
-    // TODO: відправка заявки (Telegram-бот / CRM / Sheets) — чекаємо рішення власника
-    console.log('order', order);
-    msgBox.hidden = false; msgBox.className = 'form-ok'; msgBox.textContent = 'Дякуємо! Тестова заявка прийнята — ми зателефонуємо для підтвердження.';
+    sending = true; btn.disabled = true; btn.setAttribute('aria-busy', 'true'); const label = btn.textContent; btn.textContent = 'Надсилаємо…';
+    try {
+      const r = await fetch(ORDER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(order) });
+      const res = await r.json().catch(() => ({}));
+      if (!r.ok || !res.ok) throw new Error(res.error || r.status);
+      msgBox.hidden = false; msgBox.className = 'form-ok'; msgBox.setAttribute('role', 'status');
+      msgBox.textContent = 'Дякуємо! Заявку отримано. Ми зв’яжемося з Вами, щоб підтвердити деталі замовлення.';
+      btn.textContent = 'Заявку надіслано ✓'; btn.removeAttribute('aria-busy');
+      $('#form').reset(); qty.fill(0); document.querySelectorAll('.swatch').forEach(c => { c.classList.remove('is-selected'); c.querySelector('output').textContent = '0'; }); render();
+      resetWarehouse(); state.city = null; btn.textContent = 'Заявку надіслано ✓';
+      return;
+    } catch (_) {
+      msgBox.hidden = false; msgBox.className = 'form-msg'; msgBox.setAttribute('role', 'alert');
+      msgBox.textContent = 'Не вдалося надіслати заявку. Спробуйте ще раз або зателефонуйте: +380 67 431 82 02.';
+      btn.textContent = label;
+    } finally { sending = false; btn.disabled = false; btn.removeAttribute('aria-busy'); }
   });
 
   /* ---------- sticky CTA on mobile (IntersectionObserver, no scroll listener) ---------- */
