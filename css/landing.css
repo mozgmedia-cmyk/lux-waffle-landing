@@ -212,3 +212,12 @@ picture { display:block; height:100%; }
 
 .split > div > .benefits:first-child { margin-top:0; }
 .split > div > .t-eyebrow + .benefits { margin-top:0; }
+
+/* pair: plain white size labels over video */
+.pair__tags { gap:var(--sp-5); padding-right:64px; }
+.pair__tags .callout { background:none; border:0; border-radius:0; box-shadow:none; padding:0; color:#fff; text-shadow:0 1px 8px rgba(0,0,0,.55), 0 0 2px rgba(0,0,0,.4); }
+.pair__tags .callout small, .pair__tags .callout b { color:#fff; }
+.pair__tags .callout small { font-size:var(--fs-small); }
+.pair__tags .callout b { font-size:1.375rem; }
+.pair__photo--video::after { content:""; position:absolute; inset:auto 0 0 0; height:35%; pointer-events:none; background:linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,.38)); }
+.pair__photo--video .pair__tags, .pair__photo--video .play-ui { z-index:1; }
