@@ -269,3 +269,6 @@ picture { display:block; height:100%; }
 .form-note strong { color:var(--ink-900); font-weight:700; }
 
 .faq details p strong { color:var(--ink-900); font-weight:700; }
+
+.trust-strip { grid-template-columns:repeat(2,1fr); }
+@media (min-width:768px){ .trust-strip { gap:var(--sp-8); } }
