@@ -272,3 +272,5 @@ picture { display:block; height:100%; }
 
 .trust-strip { grid-template-columns:repeat(2,1fr); }
 @media (min-width:768px){ .trust-strip { gap:var(--sp-8); } }
+
+.legal { margin:var(--sp-5) 0 0; color:var(--cream-300); font-size:var(--fs-small); line-height:1.6; font-variant-numeric:tabular-nums; }
