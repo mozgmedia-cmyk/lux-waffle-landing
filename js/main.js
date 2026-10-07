@@ -162,7 +162,7 @@
 
   /* ---------- validation + submit ---------- */
   const fields = [
-    ['name', '#f-name', '#e-name', v => v.trim() ? '' : 'Вкажіть ім’я'],
+    ['name', '#f-name', '#e-name', v => v.trim() ? '' : 'Вкажіть ім’я та прізвище'],
     ['phone', '#f-phone', '#e-phone', v => v.replace(/\D/g, '').length >= 12 ? '' : 'Введіть повний номер телефону'],
     ['city', '#f-city', '#e-city', v => (state.cities.has(v.trim()) || (state.npDown && v.trim())) ? '' : 'Оберіть населений пункт зі списку підказок'],
     ['warehouse', '#f-wh', '#e-wh', v => (state.whs.has(v.trim()) || (state.npDown && v.trim())) ? '' : 'Оберіть відділення зі списку підказок'],
