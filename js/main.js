@@ -213,7 +213,7 @@
   const sticky = $('#sticky'), vis = { hero: true, order: false, final: false };
   const upd = () => sticky.classList.toggle('is-visible', !vis.hero && !vis.order && !vis.final);
   const io2 = new IntersectionObserver(es => { es.forEach(e => { vis[e.target.dataset.k] = e.isIntersecting; }); upd(); });
-  [['#top', 'hero'], ['#order', 'order'], ['#final', 'final']].forEach(([s, k]) => { const el = $(s); el.dataset.k = k; io2.observe(el); });
+  [['#top', 'hero'], ['#order', 'order'], ['#faq', 'final']].forEach(([s, k]) => { const el = $(s); if (!el) return; el.dataset.k = k; io2.observe(el); });
 
   /* ---------- reviews carousel (native scroll-snap + prev/next) ---------- */
   const track = $('#rev-track'), prev = $('#rev-prev'), next = $('#rev-next');

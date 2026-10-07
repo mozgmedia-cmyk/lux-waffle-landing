@@ -267,3 +267,5 @@ picture { display:block; height:100%; }
 
 .form-note { margin:0; text-align:center; color:var(--ink-700); font-size:var(--fs-small); line-height:1.55; text-wrap:pretty; }
 .form-note strong { color:var(--ink-900); font-weight:700; }
+
+.faq details p strong { color:var(--ink-900); font-weight:700; }
