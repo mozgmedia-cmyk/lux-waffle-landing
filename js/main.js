@@ -156,7 +156,7 @@
   };
   fields.forEach(([, i, e, rule]) => { const inp = $(i); inp.addEventListener('blur', () => { if (inp.value || inp.getAttribute('aria-invalid') === 'true') setErr(inp, $(e), rule(inp.value)); }); });
 
-  const ORDER_URL = window.ORDER_ENDPOINT || 'https://ddcpkmawqbplzkyyxjhr.supabase.co/functions/v1/luxwaffle-order';
+  const ORDER_URL = window.ORDER_ENDPOINT || 'https://abrgippumkwgraisdgui.supabase.co/functions/v1/luxwaffle-order';
   let sending = false;
   $('#form').addEventListener('submit', async ev => {
     ev.preventDefault();
