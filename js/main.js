@@ -27,7 +27,7 @@
   }
   render();
 
-  /* ---------- Nova Poshta: city + warehouse (native <datalist>, public API) ---------- */
+  /* ---------- Nova Poshta: city + warehouse (custom combobox, public API) ---------- */
   // Для продакшну: вказати власний ключ (window.NP_API_KEY) або проксі (window.NP_ENDPOINT), щоб не залежати від ліміту анонімних запитів.
   const NP_URL = window.NP_ENDPOINT || 'https://api.novaposhta.ua/v2.0/json/';
   const np = async (modelName, calledMethod, methodProperties) => {
@@ -37,17 +37,55 @@
     if (!j.success) throw new Error((j.errors || []).join('; ') || 'NP error');
     return j;
   };
-  const cityIn = $('#f-city'), whIn = $('#f-wh'), dlCity = $('#dl-city'), dlWh = $('#dl-wh');
+  /* accessible combobox: list opens at once and filters as the user types */
+  function combo(input, listEl, onPick) {
+    let items = [], active = -1;
+    const show = on => { listEl.hidden = !on; input.setAttribute('aria-expanded', String(on)); if (!on) { active = -1; input.removeAttribute('aria-activedescendant'); } };
+    const setActive = i => {
+      active = i;
+      [...listEl.children].forEach((li, k) => { li.setAttribute('aria-selected', String(k === i)); li.classList.toggle('is-active', k === i); });
+      if (i >= 0) { const li = listEl.children[i]; input.setAttribute('aria-activedescendant', li.id); li.scrollIntoView({ block: 'nearest' }); }
+      else input.removeAttribute('aria-activedescendant');
+    };
+    const pick = k => { const v = items[k]; input.value = v; show(false); onPick(v); };
+    const render = labels => {
+      items = labels; active = -1;
+      listEl.replaceChildren(...labels.map((v, k) => {
+        const li = document.createElement('li'); li.id = `${listEl.id}-${k}`; li.setAttribute('role', 'option'); li.setAttribute('aria-selected', 'false'); li.textContent = v;
+        li.addEventListener('mousedown', e => { e.preventDefault(); pick(k); });
+        return li;
+      }));
+      show(labels.length > 0);
+    };
+    const status = text => {
+      items = []; active = -1;
+      const li = document.createElement('li'); li.className = 'is-status'; li.setAttribute('role', 'presentation'); li.textContent = text;
+      listEl.replaceChildren(li); show(true);
+    };
+    input.addEventListener('keydown', e => {
+      if (e.key === 'ArrowDown') { e.preventDefault(); if (listEl.hidden && items.length) show(true); if (items.length) setActive(Math.min(active + 1, items.length - 1)); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); if (items.length) setActive(Math.max(active - 1, 0)); }
+      else if (e.key === 'Enter' && !listEl.hidden && active >= 0) { e.preventDefault(); pick(active); }
+      else if (e.key === 'Escape' && !listEl.hidden) { e.preventDefault(); show(false); }
+    });
+    input.addEventListener('blur', () => show(false));
+    return { render, status, close: () => show(false), reopen: () => { if (items.length) show(true); } };
+  }
+
+  const cityIn = $('#f-city'), whIn = $('#f-wh');
   const state = { cities: new Map(), city: null, whs: new Map(), npDown: false };
   let cityTimer = 0, cityReq = 0, whReq = 0;
-  const fill = (dl, labels) => { dl.replaceChildren(...labels.map(v => Object.assign(document.createElement('option'), { value: v }))); };
+  const cityBox = combo(cityIn, $('#dl-city'), v => cityIn.dispatchEvent(new Event('input')));
+  const whBox = combo(whIn, $('#dl-wh'), () => { setErr(whIn, $('#e-wh'), ''); });
 
+  cityIn.addEventListener('focus', () => { if (!state.city) cityBox.reopen(); });
   cityIn.addEventListener('input', () => {
     const v = cityIn.value.trim();
-    if (state.cities.has(v)) { selectCity(state.cities.get(v)); return; }
+    if (state.cities.has(v)) { cityBox.close(); selectCity(state.cities.get(v)); return; }
     resetWarehouse(); state.city = null;
     clearTimeout(cityTimer);
-    if (v.length < 2) { fill(dlCity, []); return; }
+    if (v.length < 2) { cityBox.close(); return; }
+    cityBox.status('Шукаємо…');
     cityTimer = setTimeout(async () => {
       const req = ++cityReq;
       try {
@@ -55,15 +93,31 @@
         if (req !== cityReq) return;
         const list = ((j.data[0] || {}).Addresses || []).filter(a => a.Warehouses > 0 && a.DeliveryCity);
         state.cities = new Map(list.map(a => [a.Present, { label: a.Present, ref: a.DeliveryCity }]));
-        fill(dlCity, [...state.cities.keys()]);
         state.npDown = false;
-        if (state.cities.has(cityIn.value.trim())) selectCity(state.cities.get(cityIn.value.trim()));
-      } catch (_) { state.npDown = true; setHint('h-city', 'Не вдалося завантажити список міст. Введіть місто вручну.'); }
-    }, 250);
+        if (list.length) cityBox.render([...state.cities.keys()]); else cityBox.status('Нічого не знайдено. Перевірте назву.');
+      } catch (_) { state.npDown = true; cityBox.close(); setHint('h-city', 'Не вдалося завантажити список міст. Введіть місто вручну.'); }
+    }, 150);
   });
 
+  const whMatches = q => {
+    q = q.trim().toLowerCase();
+    const all = [...state.whs.keys()];
+    if (!q) return all.slice(0, 60);
+    const hit = all.filter(l => l.toLowerCase().includes(q));
+    const num = /^\d+$/.test(q), rank = l => num && (l.toLowerCase().includes(`№${q}:`) || l.toLowerCase().includes(`№${q} `)) ? 0 : 1;
+    return hit.sort((x, y) => rank(x) - rank(y)).slice(0, 60);
+  };
+  const showWh = () => {
+    if (whIn.disabled || !state.whs.size) return;
+    const m = whMatches(whIn.value);
+    if (state.whs.has(whIn.value.trim())) { whBox.close(); return; }
+    if (m.length) whBox.render(m); else whBox.status('Нічого не знайдено. Спробуйте номер відділення.');
+  };
+  whIn.addEventListener('input', showWh);
+  whIn.addEventListener('focus', showWh);
+
   function resetWarehouse() {
-    whReq++; state.whs = new Map(); fill(dlWh, []);
+    whReq++; state.whs = new Map(); whBox.close();
     whIn.value = ''; whIn.disabled = true; whIn.placeholder = 'Спершу оберіть місто';
   }
   async function selectCity(c) {
@@ -79,9 +133,9 @@
         total = +((j.info || {}).totalCount ?? j.data.length); all = all.concat(j.data); if (!j.data.length) break; page++;
       }
       state.whs = new Map(all.map(w => [w.Description, { label: w.Description, ref: w.Ref, number: w.Number }]));
-      fill(dlWh, [...state.whs.keys()]);
       whIn.disabled = false; whIn.placeholder = 'Номер відділення або вулиця';
       setHint('h-wh', `Знайдено ${all.length} ${plural(all.length, 'відділення', 'відділення', 'відділень')} (відділення та поштомати). Введіть номер чи вулицю.`);
+      whIn.focus();
     } catch (_) {
       state.npDown = true; whIn.disabled = false; whIn.placeholder = 'Номер відділення';
       setHint('h-wh', 'Не вдалося завантажити відділення. Введіть номер відділення вручну.');

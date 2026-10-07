@@ -251,3 +251,11 @@ picture { display:block; height:100%; }
 .benefit strong { font-weight:700; color:inherit; }
 .hl-title { text-align:center; margin:0 0 var(--sp-4); }
 .hl { background:var(--accent-100); padding:2px 12px; border-radius:var(--r-sm); box-decoration-break:clone; -webkit-box-decoration-break:clone; }
+
+/* combobox */
+.combo { position:relative; }
+.combo__list { position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:25; margin:0; padding:var(--sp-1); list-style:none; max-height:min(280px, 45vh); overflow-y:auto; overscroll-behavior:contain; background:#fff; border:1.5px solid var(--cream-300); border-radius:var(--r-md); box-shadow:var(--shadow-md); }
+.combo__list li { padding:12px var(--sp-4); min-height:44px; display:flex; align-items:center; border-radius:var(--r-sm); cursor:pointer; line-height:1.35; }
+.combo__list li:hover, .combo__list li.is-active { background:var(--accent-100); }
+.combo__list li.is-status { cursor:default; color:var(--ink-500); }
+.combo__list li.is-status:hover { background:none; }
