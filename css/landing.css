@@ -274,3 +274,7 @@ picture { display:block; height:100%; }
 @media (min-width:768px){ .trust-strip { gap:var(--sp-8); } }
 
 .legal { margin:var(--sp-5) 0 0; color:var(--cream-300); font-size:var(--fs-small); line-height:1.6; font-variant-numeric:tabular-nums; }
+
+/* hero video: crop the empty wall on top, keep towels in frame */
+.hero__media video { object-position:50% 100%; }
+@media (max-width:767px){ .hero__media video { transform:scale(1.12); transform-origin:50% 100%; } }
