@@ -143,10 +143,27 @@
   }
   const setHint = (id, t) => { $('#' + id).textContent = t; };
 
+  /* phone: "+380 " is always there; the rest is formatted as +380 XX XXX XX XX */
+  const phoneIn = $('#f-phone');
+  const fmtPhone = v => {
+    let d = v.replace(/\D/g, '');
+    if (d.startsWith('380')) d = d.slice(3); else if (d.startsWith('38')) d = d.slice(2); else if (d.startsWith('0')) d = d.slice(1);
+    d = d.slice(0, 9);
+    const g = [d.slice(0, 2), d.slice(2, 5), d.slice(5, 7), d.slice(7, 9)].filter(Boolean).join(' ');
+    return '+380 ' + g;
+  };
+  phoneIn.addEventListener('input', () => {
+    const atEnd = phoneIn.selectionStart >= phoneIn.value.length - 1;
+    const f = fmtPhone(phoneIn.value);
+    if (f !== phoneIn.value) { phoneIn.value = f; if (atEnd) phoneIn.setSelectionRange(f.length, f.length); }
+  });
+  phoneIn.addEventListener('focus', () => { const n = phoneIn.value.length; requestAnimationFrame(() => phoneIn.setSelectionRange(n, n)); });
+  phoneIn.addEventListener('keydown', e => { if ((e.key === 'Backspace' || e.key === 'Delete') && phoneIn.value.length <= 5 && phoneIn.selectionStart <= 5) e.preventDefault(); });
+
   /* ---------- validation + submit ---------- */
   const fields = [
     ['name', '#f-name', '#e-name', v => v.trim() ? '' : 'Вкажіть ім’я'],
-    ['phone', '#f-phone', '#e-phone', v => v.replace(/\D/g, '').length >= 10 ? '' : 'Введіть повний номер телефону'],
+    ['phone', '#f-phone', '#e-phone', v => v.replace(/\D/g, '').length >= 12 ? '' : 'Введіть повний номер телефону'],
     ['city', '#f-city', '#e-city', v => (state.cities.has(v.trim()) || (state.npDown && v.trim())) ? '' : 'Оберіть населений пункт зі списку підказок'],
     ['warehouse', '#f-wh', '#e-wh', v => (state.whs.has(v.trim()) || (state.npDown && v.trim())) ? '' : 'Оберіть відділення зі списку підказок'],
   ];

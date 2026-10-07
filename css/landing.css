@@ -264,3 +264,6 @@ picture { display:block; height:100%; }
 .pair__count { display:flex; align-items:center; gap:var(--sp-3); margin:0 0 var(--sp-4); flex-wrap:nowrap; }
 .pair__count .pair__big { font-size:clamp(3.5rem, 2.6rem + 4vw, 5.5rem); line-height:.85; flex:none; margin:0; }
 .pair__count .pair__cap { font:600 clamp(1rem, .85rem + .8vw, 1.375rem)/1.25 var(--font-body); color:var(--ink-900); margin:0 !important; text-wrap:balance; }
+
+.form-note { margin:0; text-align:center; color:var(--ink-700); font-size:var(--fs-small); line-height:1.55; text-wrap:pretty; }
+.form-note strong { color:var(--ink-900); font-weight:700; }
