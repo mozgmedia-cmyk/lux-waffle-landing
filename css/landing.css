@@ -211,3 +211,4 @@ picture { display:block; height:100%; }
 .chip--save { background:var(--accent-600); color:#fff; padding:8px 16px; font-size:var(--fs-body); }
 
 .split > div > .benefits:first-child { margin-top:0; }
+.split > div > .t-eyebrow + .benefits { margin-top:0; }
