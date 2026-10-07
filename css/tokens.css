@@ -1,0 +1,74 @@
+/* Waffle Landing — design tokens
+   Source: landing sketch (warm cream, terracotta CTA, serif display + clean sans). */
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap&subset=cyrillic");
+
+:root {
+  /* Surfaces */
+  --cream-50:  #FBF8F4;
+  --cream-100: #F4EEE7;
+  --cream-200: #EBE2D7;
+  --cream-300: #DDD0C0;
+
+  /* Ink */
+  --ink-900: #2A2522;
+  --ink-700: #4A423D;
+  --ink-500: #6B6159;
+  --ink-300: #B3A99F;
+
+  /* Accent (terracotta) */
+  --accent-300: #EBB9A4;
+  --accent-100: #F8E4DA;
+  --accent-500: #B9553A;
+  --accent-600: #9A4530;
+  --accent-700: #7E3926;
+
+  /* Status */
+  --success: #5C7F5A;
+  --danger:  #B3402E;
+
+  /* Product colours (towel swatches) */
+  --sw-terracotta: #C9633F;
+  --sw-cream:      #EFE4D3;
+  --sw-blue:       #5E86A8;
+  --sw-olive:      #6E7A4F;
+  --sw-powder:     #E7A9A0;
+  --sw-sage:       #8FA58A;
+  --sw-graphite:   #4A4A4C;
+  --sw-mint:       #9CC2AE;
+
+  /* Type */
+  --font-display: "Cormorant Garamond", "Times New Roman", serif;
+  --font-body:    "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --fs-display: clamp(2.25rem, 1.4rem + 3.6vw, 4.25rem);
+  --fs-h1:      clamp(1.75rem, 1.2rem + 2.4vw, 3rem);
+  --fs-h2:      clamp(1.5rem, 1.1rem + 1.6vw, 2.25rem);
+  --fs-h3:      1.25rem;
+  --fs-body:    1rem;
+  --fs-small:   0.875rem;
+  --fs-caption: 0.75rem;
+
+  --lh-tight: 1.15;
+  --lh-body:  1.55;
+
+  /* Space (4px scale) */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 24px; --sp-6: 32px; --sp-7: 48px; --sp-8: 64px; --sp-9: 96px;
+
+  /* Shape & depth */
+  --r-sm: 8px; --r-md: 14px; --r-lg: 24px; --r-pill: 999px;
+  --shadow-sm: 0 1px 2px rgba(42,37,34,.06);
+  --shadow-md: 0 8px 24px rgba(42,37,34,.08);
+  --shadow-cta: var(--shadow-sm);
+
+  /* Stacking scale */
+  --z-header: 20; --z-sticky: 30; --z-skip: 40;
+
+  /* Layout */
+  --container: 1200px;
+  --gutter: 16px;
+  --section-y: var(--sp-7);
+}
+
+@media (min-width: 768px)  { :root { --gutter: 32px; --section-y: var(--sp-8); } }
+@media (min-width: 1200px) { :root { --section-y: var(--sp-9); } }
