@@ -201,3 +201,5 @@ picture { display:block; height:100%; }
 .pair__tags { position:absolute; left:var(--sp-3); right:var(--sp-3); bottom:var(--sp-3); display:flex; flex-wrap:wrap; gap:var(--sp-2); padding-right:56px; }
 .pair__tags .callout { position:static; }
 .pair__photo--video .play-ui { right:var(--sp-3); bottom:var(--sp-3); }
+
+.trust-wrap { background:var(--cream-100); border-bottom:1px solid var(--cream-200); }
