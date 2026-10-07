@@ -244,3 +244,10 @@ picture { display:block; height:100%; }
 .hotel__points span { color:var(--ink-700); font-size:var(--fs-small); }
 .hotel__points b { display:block; color:var(--ink-900); font:600 1.25rem/1.3 var(--font-display); margin-bottom:2px; }
 @media (min-width:768px){ .hotel__points { grid-template-columns:repeat(3,1fr); gap:var(--sp-6); } }
+
+/* tweaks: tighter "2" caption, highlighted order title, bold in benefits */
+.pair__big { line-height:.8; margin-bottom:0; }
+.pair__cap { margin-top:calc(var(--sp-2) * -1) !important; }
+.benefit strong { font-weight:700; color:inherit; }
+.hl-title { text-align:center; margin:0 0 var(--sp-4); }
+.hl { background:var(--accent-100); padding:2px 12px; border-radius:var(--r-sm); box-decoration-break:clone; -webkit-box-decoration-break:clone; }
