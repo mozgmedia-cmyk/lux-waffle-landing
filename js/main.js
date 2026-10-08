@@ -3,6 +3,27 @@
   const $ = s => document.querySelector(s);
   const fmt = n => n.toLocaleString('uk-UA').replace(/ /g, ' ') + ' грн';
   const sets = () => qty.reduce((s, q) => s + q, 0);
+  /* ---------- ad attribution (UTM / fbclid), kept 30 days ---------- */
+  const ATTR_KEY = 'lw_attr', DAY = 864e5;
+  const readAttr = () => { try { const o = JSON.parse(localStorage.getItem(ATTR_KEY) || 'null'); return o && Date.now() - o.t < 30 * DAY ? o.v : null; } catch (_) { return null; } };
+  (function captureAttr() {
+    try {
+      const q = new URLSearchParams(location.search), v = {};
+      ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid'].forEach(k => { if (q.get(k)) v[k] = q.get(k).slice(0, 300); });
+      if (Object.keys(v).length) { v.landing = location.origin + location.pathname; v.referrer = document.referrer.slice(0, 300); localStorage.setItem(ATTR_KEY, JSON.stringify({ t: Date.now(), v })); }
+    } catch (_) {}
+  })();
+
+  /* ---------- Meta Pixel (off until window.META_PIXEL_ID is set) ---------- */
+  const PIXEL = (window.META_PIXEL_ID || '').trim();
+  if (PIXEL) {
+    !function (f, b, e, v, n, t, s) { if (f.fbq) return; n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments); }; if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = []; t = b.createElement(e); t.async = !0; t.src = v; s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s); }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', PIXEL); fbq('track', 'PageView');
+  }
+  const fbTrack = (name, params, eventID) => { if (PIXEL && window.fbq) { try { fbq('track', name, params || {}, eventID ? { eventID } : undefined); } catch (_) {} } };
+  const once = {}; const trackOnce = (name, params) => { if (!once[name]) { once[name] = 1; fbTrack(name, params); } };
+  fbTrack('ViewContent', { content_name: 'Waffle towel set', content_type: 'product', value: 950, currency: 'UAH' });
+
   const plural = (n, a, b, c) => n === 1 ? a : (n % 10 > 1 && n % 10 < 5 && (n < 10 || n > 20)) ? b : c;
 
   /* ---------- colour picker + summary ---------- */
@@ -10,6 +31,7 @@
     const b = e.target.closest('button[data-d]'); if (!b) return;
     const card = b.closest('.swatch'), i = +card.dataset.i;
     qty[i] = Math.max(0, Math.min(20, qty[i] + +b.dataset.d));
+    if (qty[i] > 0 && +b.dataset.d > 0) trackOnce('AddToCart', { content_name: COLORS[i], value: 950, currency: 'UAH' });
     card.querySelector('output').textContent = qty[i];
     card.classList.toggle('is-selected', qty[i] > 0);
     render();
@@ -26,6 +48,8 @@
     $('#submit').textContent = label; $('#stickyBtn').textContent = label;
   }
   render();
+
+  $('#form').addEventListener('focusin', () => trackOnce('InitiateCheckout', { value: sets() * 950, currency: 'UAH', num_items: sets() }), { once: true });
 
   /* ---------- Nova Poshta: city + warehouse (custom combobox, public API) ---------- */
   // Для продакшну: вказати власний ключ (window.NP_API_KEY) або проксі (window.NP_ENDPOINT), щоб не залежати від ліміту анонімних запитів.
@@ -190,12 +214,15 @@
       warehouse: whIn.value.trim(),
       items: COLORS.map((n, i) => [n, qty[i]]).filter(x => x[1]),
       website: $('#f-website').value,
+      utm: readAttr() || {},
     };
+    const leadValue = sets() * 950, leadSets = sets();
     sending = true; btn.disabled = true; btn.setAttribute('aria-busy', 'true'); const label = btn.textContent; btn.textContent = 'Надсилаємо…';
     try {
       const r = await fetch(ORDER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(order) });
       const res = await r.json().catch(() => ({}));
       if (!r.ok || !res.ok) throw new Error(res.error || r.status);
+      fbTrack('Lead', { value: leadValue, currency: 'UAH', num_items: leadSets }, res.id);
       msgBox.hidden = false; msgBox.className = 'form-ok'; msgBox.setAttribute('role', 'status');
       msgBox.textContent = 'Дякуємо! Заявку отримано. Ми зв’яжемося з Вами, щоб підтвердити деталі замовлення.';
       btn.textContent = 'Заявку надіслано ✓'; btn.removeAttribute('aria-busy');
