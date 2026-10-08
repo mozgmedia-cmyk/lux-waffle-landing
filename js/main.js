@@ -5,6 +5,7 @@
   const sets = () => qty.reduce((s, q) => s + q, 0);
   /* ---------- ad attribution (UTM / fbclid), kept 30 days ---------- */
   const ATTR_KEY = 'lw_attr', DAY = 864e5;
+  const readCookie = n => { try { const m = document.cookie.match(new RegExp('(?:^|; )' + n + '=([^;]*)')); return m ? decodeURIComponent(m[1]) : ''; } catch (_) { return ''; } };
   const readAttr = () => { try { const o = JSON.parse(localStorage.getItem(ATTR_KEY) || 'null'); return o && Date.now() - o.t < 30 * DAY ? o.v : null; } catch (_) { return null; } };
   (function captureAttr() {
     try {
@@ -215,6 +216,7 @@
       items: COLORS.map((n, i) => [n, qty[i]]).filter(x => x[1]),
       website: $('#f-website').value,
       utm: readAttr() || {},
+      fbp: readCookie('_fbp'), fbc: readCookie('_fbc'),
     };
     const leadValue = sets() * 950, leadSets = sets();
     sending = true; btn.disabled = true; btn.setAttribute('aria-busy', 'true'); const label = btn.textContent; btn.textContent = 'Надсилаємо…';
