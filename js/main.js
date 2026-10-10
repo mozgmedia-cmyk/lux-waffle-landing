@@ -3,15 +3,30 @@
   const $ = s => document.querySelector(s);
   const fmt = n => n.toLocaleString('uk-UA').replace(/ /g, ' ') + ' грн';
   const sets = () => qty.reduce((s, q) => s + q, 0);
-  /* ---------- ad attribution (UTM / fbclid), kept 30 days ---------- */
-  const ATTR_KEY = 'lw_attr', DAY = 864e5;
+  /* ---------- ad attribution (UTM / fbclid), kept 30 days: localStorage + cookie + sessionStorage ---------- */
+  const ATTR_KEY = 'lw_attr', FIRST_KEY = 'lw_first', DAY = 864e5;
   const readCookie = n => { try { const m = document.cookie.match(new RegExp('(?:^|; )' + n + '=([^;]*)')); return m ? decodeURIComponent(m[1]) : ''; } catch (_) { return ''; } };
-  const readAttr = () => { try { const o = JSON.parse(localStorage.getItem(ATTR_KEY) || 'null'); return o && Date.now() - o.t < 30 * DAY ? o.v : null; } catch (_) { return null; } };
+  const writeCookie = (n, val, days) => { try { document.cookie = n + '=' + encodeURIComponent(val) + '; max-age=' + Math.round(days * 86400) + '; path=/; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : ''); } catch (_) {} };
+  const store = (key, obj) => {
+    const raw = JSON.stringify(obj);
+    try { localStorage.setItem(key, raw); } catch (_) {}
+    try { sessionStorage.setItem(key, raw); } catch (_) {}
+    writeCookie(key, raw, 30);
+  };
+  const load = key => {
+    const tries = [() => localStorage.getItem(key), () => sessionStorage.getItem(key), () => readCookie(key)];
+    for (const t of tries) { try { const o = JSON.parse(t() || 'null'); if (o && Date.now() - o.t < 30 * DAY) return o.v; } catch (_) {} }
+    return null;
+  };
+  const readAttr = () => load(ATTR_KEY);
+  const readFirst = () => load(FIRST_KEY);
   (function captureAttr() {
     try {
       const q = new URLSearchParams(location.search), v = {};
       ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid'].forEach(k => { if (q.get(k)) v[k] = q.get(k).slice(0, 300); });
-      if (Object.keys(v).length) { v.landing = location.origin + location.pathname; v.referrer = document.referrer.slice(0, 300); localStorage.setItem(ATTR_KEY, JSON.stringify({ t: Date.now(), v })); }
+      if (Object.keys(v).length) { v.landing = location.origin + location.pathname; v.referrer = document.referrer.slice(0, 300); store(ATTR_KEY, { t: Date.now(), v }); }
+      // First touch: where the visitor came from on the very first visit, even without UTM.
+      if (!readFirst()) store(FIRST_KEY, { t: Date.now(), v: { landing: location.href.slice(0, 300), referrer: document.referrer.slice(0, 300) } });
     } catch (_) {}
   })();
 
@@ -215,7 +230,7 @@
       warehouse: whIn.value.trim(),
       items: COLORS.map((n, i) => [n, qty[i]]).filter(x => x[1]),
       website: $('#f-website').value,
-      utm: readAttr() || {},
+      utm: readAttr() || {}, first: readFirst() || {},
       fbp: readCookie('_fbp'), fbc: readCookie('_fbc'),
     };
     const leadValue = sets() * 950, leadSets = sets();
