@@ -40,6 +40,26 @@
   const once = {}; const trackOnce = (name, params) => { if (!once[name]) { once[name] = 1; fbTrack(name, params); } };
   fbTrack('ViewContent', { content_name: 'Waffle towel set', content_type: 'product', value: 950, currency: 'UAH' });
 
+  /* ---------- server-side visit log: keeps the landing URL (UTM/fbclid) even if the browser drops storage ---------- */
+  (function logVisit() {
+    try {
+      let seen = ''; try { seen = sessionStorage.getItem('lw_visit') || ''; } catch (_) {}
+      if (seen) return;
+      let tries = 0;
+      const send = () => {
+        tries++;
+        const fbp = readCookie('_fbp');
+        if (!fbp && tries < 4) return setTimeout(send, 1500);
+        try { sessionStorage.setItem('lw_visit', '1'); } catch (_) {}
+        try {
+          fetch(ORDER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
+            body: JSON.stringify({ type: 'visit', url: location.href.slice(0, 600), referrer: document.referrer.slice(0, 400), fbp, fbc: readCookie('_fbc') }) }).catch(() => {});
+        } catch (_) {}
+      };
+      setTimeout(send, 1200);
+    } catch (_) {}
+  })();
+
   const plural = (n, a, b, c) => n === 1 ? a : (n % 10 > 1 && n % 10 < 5 && (n < 10 || n > 20)) ? b : c;
 
   /* ---------- colour picker + summary ---------- */
