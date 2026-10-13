@@ -399,5 +399,31 @@
     1152
    ]
   ]
+ },
+ "c-wave": {
+  "id": "file:_added/wave.jpg",
+  "sizes": [
+   [
+    480,
+    601
+   ],
+   [
+    768,
+    961
+   ]
+  ]
+ },
+ "c-anthracite": {
+  "id": "file:_added/anthracite.jpg",
+  "sizes": [
+   [
+    480,
+    720
+   ],
+   [
+    768,
+    1152
+   ]
+  ]
  }
 }
