@@ -38,6 +38,18 @@
   }
   const fbTrack = (name, params, eventID) => { if (PIXEL && window.fbq) { try { fbq('track', name, params || {}, eventID ? { eventID } : undefined); } catch (_) {} } };
   const once = {}; const trackOnce = (name, params) => { if (!once[name]) { once[name] = 1; fbTrack(name, params); } };
+  /* custom funnel events (Events Manager → custom conversions), each fired once per visit */
+  const evtOnce = (name, params) => { if (once['c:' + name]) return; once['c:' + name] = 1; if (PIXEL && window.fbq) { try { fbq('trackCustom', name, params || {}); } catch (_) {} } };
+  (function funnelTimers() {
+    [15, 30, 60].forEach(sec => setTimeout(() => { if (!document.hidden) evtOnce('TimeOnPage' + sec); }, sec * 1000));
+    const marks = [25, 50, 75, 100];
+    const onScroll = () => {
+      const h = document.documentElement, max = h.scrollHeight - h.clientHeight;
+      if (max <= 0) return; const pct = Math.round(100 * (window.scrollY || h.scrollTop) / max);
+      marks.forEach(m => { if (pct >= m - (m === 100 ? 3 : 0)) evtOnce('Scroll' + m); });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+  })();
   fbTrack('ViewContent', { content_name: 'Waffle towel set', content_type: 'product', value: 950, currency: 'UAH' });
 
   /* ---------- server-side visit log: keeps the landing URL (UTM/fbclid) even if the browser drops storage ---------- */
@@ -60,6 +72,13 @@
     } catch (_) {}
   })();
 
+  /* Microsoft Clarity (heatmaps, session recordings, time on page). Off until window.CLARITY_ID is set. Form inputs are masked. */
+  (function clarity() {
+    const id = (window.CLARITY_ID || '').trim(); if (!id) return;
+    try { const f = document.getElementById('form'); if (f) f.setAttribute('data-clarity-mask', 'True'); } catch (_) {}
+    (function (c, l, a, r, i, t, y) { c[a] = c[a] || function () { (c[a].q = c[a].q || []).push(arguments); }; t = l.createElement(r); t.async = 1; t.src = 'https://www.clarity.ms/tag/' + i; y = l.getElementsByTagName(r)[0]; y.parentNode.insertBefore(t, y); })(window, document, 'clarity', 'script', id);
+  })();
+
   const plural = (n, a, b, c) => n === 1 ? a : (n % 10 > 1 && n % 10 < 5 && (n < 10 || n > 20)) ? b : c;
 
   /* ---------- colour picker + summary ---------- */
@@ -68,6 +87,7 @@
     const card = b.closest('.swatch'), i = +card.dataset.i;
     qty[i] = Math.max(0, Math.min(20, qty[i] + +b.dataset.d));
     if (qty[i] > 0 && +b.dataset.d > 0) trackOnce('AddToCart', { content_name: COLORS[i], value: 950, currency: 'UAH' });
+    if (qty[i] > 0 && +b.dataset.d > 0) evtOnce('ColorSelected', { color: COLORS[i] });
     card.querySelector('output').textContent = qty[i];
     card.classList.toggle('is-selected', qty[i] > 0);
     render();
@@ -86,6 +106,12 @@
   render();
 
   $('#form').addEventListener('focusin', () => trackOnce('InitiateCheckout', { value: sets() * 950, currency: 'UAH', num_items: sets() }), { once: true });
+  $('#form').addEventListener('focusin', e => {
+    const id = e.target && e.target.id; if (!id) return;
+    evtOnce('FormStarted');
+    const map = { 'f-name': 'FieldName', 'f-phone': 'FieldPhone' };
+    if (map[id]) evtOnce(map[id]);
+  });
 
   /* ---------- Nova Poshta: city + warehouse (custom combobox, public API) ---------- */
   // Для продакшну: вказати власний ключ (window.NP_API_KEY) або проксі (window.NP_ENDPOINT), щоб не залежати від ліміту анонімних запитів.
@@ -170,7 +196,7 @@
   const showWh = () => {
     if (whIn.disabled || !state.whs.size) return;
     const m = whMatches(whIn.value);
-    if (state.whs.has(whIn.value.trim())) { whBox.close(); return; }
+    if (state.whs.has(whIn.value.trim())) { evtOnce('WarehouseChosen'); whBox.close(); return; }
     if (m.length) whBox.render(m); else whBox.status('Нічого не знайдено. Спробуйте номер відділення.');
   };
   whIn.addEventListener('input', showWh);
@@ -183,6 +209,7 @@
   async function selectCity(c) {
     if (state.city && state.city.ref === c.ref) return;
     state.city = c; resetWarehouse();
+    evtOnce('CityChosen');
     whIn.placeholder = 'Завантажуємо відділення…';
     const req = whReq;
     try {
@@ -243,7 +270,8 @@
     const noItems = !sets();
     msgBox.hidden = !noItems; msgBox.textContent = noItems ? 'Оберіть хоча б один колір вище.' : '';
     if (noItems && !first) { $('#swatches').scrollIntoView(); return; }
-    if (first) { first.focus(); return; }
+    if (first) { evtOnce('SubmitInvalid', { field: first.id || '' }); first.focus(); return; }
+    evtOnce('SubmitAttempt');
     const order = {
       name: $('#f-name').value.trim(), phone: $('#f-phone').value.trim(),
       city: state.city && state.city.label || cityIn.value.trim(),
