@@ -32,14 +32,16 @@
 
   /* ---------- Meta Pixel (off until window.META_PIXEL_ID is set) ---------- */
   const PIXEL = (window.META_PIXEL_ID || '').trim();
+  /* page layout version (A/B of block order) — attached to every event, the visit log and the order */
+  const LAYOUT = (window.SITE_LAYOUT || 'L1').trim();
   if (PIXEL) {
     !function (f, b, e, v, n, t, s) { if (f.fbq) return; n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments); }; if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = []; t = b.createElement(e); t.async = !0; t.src = v; s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s); }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', PIXEL); fbq('track', 'PageView');
+    fbq('init', PIXEL); fbq('track', 'PageView', { layout: LAYOUT });
   }
-  const fbTrack = (name, params, eventID) => { if (PIXEL && window.fbq) { try { fbq('track', name, params || {}, eventID ? { eventID } : undefined); } catch (_) {} } };
+  const fbTrack = (name, params, eventID) => { if (PIXEL && window.fbq) { try { fbq('track', name, Object.assign({ layout: LAYOUT }, params || {}), eventID ? { eventID } : undefined); } catch (_) {} } };
   const once = {}; const trackOnce = (name, params) => { if (!once[name]) { once[name] = 1; fbTrack(name, params); } };
   /* custom funnel events (Events Manager → custom conversions), each fired once per visit */
-  const evtOnce = (name, params) => { if (once['c:' + name]) return; once['c:' + name] = 1; if (PIXEL && window.fbq) { try { fbq('trackCustom', name, params || {}); } catch (_) {} } };
+  const evtOnce = (name, params) => { if (once['c:' + name]) return; once['c:' + name] = 1; if (PIXEL && window.fbq) { try { fbq('trackCustom', name, Object.assign({ layout: LAYOUT }, params || {})); } catch (_) {} } };
   (function funnelTimers() {
     [15, 30, 60].forEach(sec => setTimeout(() => { if (!document.hidden) evtOnce('TimeOnPage' + sec); }, sec * 1000));
     const marks = [25, 50, 75, 100];
@@ -65,7 +67,7 @@
         try { sessionStorage.setItem('lw_visit', '1'); } catch (_) {}
         try {
           fetch(ORDER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
-            body: JSON.stringify({ type: 'visit', url: location.href.slice(0, 600), referrer: document.referrer.slice(0, 400), fbp, fbc: readCookie('_fbc') }) }).catch(() => {});
+            body: JSON.stringify({ type: 'visit', url: (location.href + (location.search ? '&' : '?') + 'lw_layout=' + LAYOUT).slice(0, 600), referrer: document.referrer.slice(0, 400), fbp, fbc: readCookie('_fbc'), layout: LAYOUT }) }).catch(() => {});
         } catch (_) {}
       };
       setTimeout(send, 1200);
@@ -77,6 +79,7 @@
     const id = (window.CLARITY_ID || '').trim(); if (!id) return;
     try { const f = document.getElementById('form'); if (f) f.setAttribute('data-clarity-mask', 'True'); } catch (_) {}
     (function (c, l, a, r, i, t, y) { c[a] = c[a] || function () { (c[a].q = c[a].q || []).push(arguments); }; t = l.createElement(r); t.async = 1; t.src = 'https://www.clarity.ms/tag/' + i; y = l.getElementsByTagName(r)[0]; y.parentNode.insertBefore(t, y); })(window, document, 'clarity', 'script', id);
+    try { window.clarity('set', 'layout', LAYOUT); } catch (_) {}
   })();
 
   const plural = (n, a, b, c) => n === 1 ? a : (n % 10 > 1 && n % 10 < 5 && (n < 10 || n > 20)) ? b : c;
@@ -278,7 +281,7 @@
       warehouse: whIn.value.trim(),
       items: COLORS.map((n, i) => [n, qty[i]]).filter(x => x[1]),
       website: $('#f-website').value,
-      utm: readAttr() || {}, first: readFirst() || {},
+      utm: readAttr() || {}, first: readFirst() || {}, layout: LAYOUT,
       fbp: readCookie('_fbp'), fbc: readCookie('_fbc'),
     };
     const leadValue = sets() * 950, leadSets = sets();
