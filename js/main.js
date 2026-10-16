@@ -23,7 +23,9 @@
   (function captureAttr() {
     try {
       const q = new URLSearchParams(location.search), v = {};
-      ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid'].forEach(k => { if (q.get(k)) v[k] = q.get(k).slice(0, 300); });
+      ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid', 'ttclid'].forEach(k => { if (q.get(k)) v[k] = q.get(k).slice(0, 300); });
+      // TikTok appends ttclid to every ad click; if the ad URL has no UTM, derive the source from it.
+      if (v.ttclid && !v.utm_source) { v.utm_source = 'tiktok'; v.utm_medium = 'paid'; }
       if (Object.keys(v).length) { v.landing = location.origin + location.pathname; v.referrer = document.referrer.slice(0, 300); store(ATTR_KEY, { t: Date.now(), v }); }
       // First touch: where the visitor came from on the very first visit, even without UTM.
       if (!readFirst()) store(FIRST_KEY, { t: Date.now(), v: { landing: location.href.slice(0, 300), referrer: document.referrer.slice(0, 300) } });
@@ -38,6 +40,14 @@
     !function (f, b, e, v, n, t, s) { if (f.fbq) return; n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments); }; if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = []; t = b.createElement(e); t.async = !0; t.src = v; s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s); }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
     fbq('init', PIXEL); fbq('track', 'PageView', { layout: LAYOUT });
   }
+  /* ---------- TikTok Pixel (off until window.TIKTOK_PIXEL_ID is set) ---------- */
+  const TTQ_ID = (window.TIKTOK_PIXEL_ID || '').trim();
+  if (TTQ_ID) {
+    try {
+      !function (w, d, t) { w.TiktokAnalyticsObject = t; var ttq = w[t] = w[t] || []; ttq.methods = ['page', 'track', 'identify', 'instances', 'debug', 'on', 'off', 'once', 'ready', 'alias', 'group', 'enableCookie', 'disableCookie', 'holdConsent', 'revokeConsent', 'grantConsent']; ttq.setAndDefer = function (t, e) { t[e] = function () { t.push([e].concat(Array.prototype.slice.call(arguments, 0))); }; }; for (var i = 0; i < ttq.methods.length; i++) ttq.setAndDefer(ttq, ttq.methods[i]); ttq.instance = function (t) { for (var e = ttq._i[t] || [], n = 0; n < ttq.methods.length; n++) ttq.setAndDefer(e, ttq.methods[n]); return e; }; ttq.load = function (e, n) { var r = 'https://analytics.tiktok.com/i18n/pixel/events.js'; ttq._i = ttq._i || {}; ttq._i[e] = []; ttq._i[e]._u = r; ttq._t = ttq._t || {}; ttq._t[e] = +new Date; ttq._o = ttq._o || {}; ttq._o[e] = n || {}; var o = d.createElement('script'); o.type = 'text/javascript'; o.async = !0; o.src = r + '?sdkid=' + e + '&lib=' + t; var a = d.getElementsByTagName('script')[0]; a.parentNode.insertBefore(o, a); }; ttq.load(TTQ_ID); ttq.page(); }(window, document, 'ttq');
+    } catch (_) {}
+  }
+  const ttTrack = (name, params, eventID) => { if (TTQ_ID && window.ttq) { try { ttq.track(name, params || {}, eventID ? { event_id: eventID } : undefined); } catch (_) {} } };
   const fbTrack = (name, params, eventID) => { if (PIXEL && window.fbq) { try { fbq('track', name, Object.assign({ layout: LAYOUT }, params || {}), eventID ? { eventID } : undefined); } catch (_) {} } };
   const once = {}; const trackOnce = (name, params) => { if (!once[name]) { once[name] = 1; fbTrack(name, params); } };
   /* custom funnel events (Events Manager → custom conversions), each fired once per visit */
@@ -53,6 +63,7 @@
     window.addEventListener('scroll', onScroll, { passive: true });
   })();
   fbTrack('ViewContent', { content_name: 'Waffle towel set', content_type: 'product', value: 950, currency: 'UAH' });
+  ttTrack('ViewContent', { content_name: 'Waffle towel set', content_type: 'product', value: 950, currency: 'UAH' });
 
   /* ---------- server-side visit log: keeps the landing URL (UTM/fbclid) even if the browser drops storage ---------- */
   (function logVisit() {
@@ -89,7 +100,7 @@
     const b = e.target.closest('button[data-d]'); if (!b) return;
     const card = b.closest('.swatch'), i = +card.dataset.i;
     qty[i] = Math.max(0, Math.min(20, qty[i] + +b.dataset.d));
-    if (qty[i] > 0 && +b.dataset.d > 0) trackOnce('AddToCart', { content_name: COLORS[i], value: 950, currency: 'UAH' });
+    if (qty[i] > 0 && +b.dataset.d > 0) trackOnce('AddToCart', { content_name: COLORS[i], value: 950, currency: 'UAH' }); if (!once['tt:atc']) { once['tt:atc'] = 1; ttTrack('AddToCart', { content_name: COLORS[i], value: 950, currency: 'UAH' }); }
     if (qty[i] > 0 && +b.dataset.d > 0) evtOnce('ColorSelected', { color: COLORS[i] });
     card.querySelector('output').textContent = qty[i];
     card.classList.toggle('is-selected', qty[i] > 0);
@@ -108,7 +119,7 @@
   }
   render();
 
-  $('#form').addEventListener('focusin', () => trackOnce('InitiateCheckout', { value: sets() * 950, currency: 'UAH', num_items: sets() }), { once: true });
+  $('#form').addEventListener('focusin', () => { trackOnce('InitiateCheckout', { value: sets() * 950, currency: 'UAH', num_items: sets() }); ttTrack('InitiateCheckout', { value: sets() * 950, currency: 'UAH' }); }, { once: true });
   $('#form').addEventListener('focusin', e => {
     const id = e.target && e.target.id; if (!id) return;
     evtOnce('FormStarted');
@@ -291,6 +302,7 @@
       const res = await r.json().catch(() => ({}));
       if (!r.ok || !res.ok) throw new Error(res.error || r.status);
       fbTrack('Lead', { value: leadValue, currency: 'UAH', num_items: leadSets }, res.id);
+      ttTrack('SubmitForm', { value: leadValue, currency: 'UAH', content_name: 'Waffle towel set' }, res.id);
       msgBox.hidden = false; msgBox.className = 'form-ok'; msgBox.setAttribute('role', 'status');
       msgBox.textContent = 'Дякуємо! Заявку отримано. Ми зв’яжемося з Вами, щоб підтвердити деталі замовлення.';
       btn.textContent = 'Заявку надіслано ✓'; btn.removeAttribute('aria-busy');
