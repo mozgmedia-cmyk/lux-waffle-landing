@@ -32,6 +32,14 @@ h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
 .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px }
 .tile b { display: block; font-size: 1.5rem; font-variant-numeric: tabular-nums; line-height: 1.1 }
 .tile span { color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-spacing: .05em }
+.tile .src b { color: var(--ok) }
+.tile--ads { grid-column: span 2 }
+.spend { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px }
+.spend label { flex: 1 0 100% }
+.spend input { border: 1px solid var(--line); background: var(--bg); color: var(--fg); border-radius: 8px; padding: 6px 8px; font: inherit; font-size: .88rem; min-width: 0 }
+.spend #spend-amt { width: 7em; font-variant-numeric: tabular-nums }
+.spend #spend-note { flex: 1 1 8em }
+@media (max-width: 420px) { .tile--ads { grid-column: 1 / -1 } }
 .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
 .chip { border: 1px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: .88rem; cursor: pointer }
 .chip[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg) }
@@ -127,7 +135,9 @@ h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
   const API = 'https://abrgippumkwgraisdgui.supabase.co/functions/v1/luxwaffle-admin';
   const $ = (s, r = document) => r.querySelector(s);
   const login = $('#login'), app = $('#app'), list = $('#list'), state = $('#state'), tiles = $('#tiles'), fresh = $('#fresh'), loginMsg = $('#login-msg');
-  let orders = [], filter = 'all', query = '', pass = '', busy = new Set();
+  let orders = [], ads = null, filter = 'all', query = '', pass = '', busy = new Set();
+  const PROFIT_PER_SET = 500; // чистий прибуток з комплекту (за даними власника)
+  const uah = n => (Math.round(n) || 0).toLocaleString('uk-UA') + ' ₴';
 
   const rd = (k) => { try { return sessionStorage.getItem(k) || localStorage.getItem(k) || ''; } catch (_) { return ''; } };
   const wr = (k, v, persist) => { try { sessionStorage.setItem(k, v); if (persist) localStorage.setItem(k, v); } catch (_) {} };
@@ -161,16 +171,37 @@ h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
 
   const renderTiles = () => {
     const paid = orders.filter(o => o.paid_at), shipped = orders.filter(o => o.shipped_at), declined = orders.filter(o => o.declined_at);
-    const sets = r => r.reduce((s, o) => s + (+o.sets || 0), 0);
+    const work = orders.filter(o => !o.paid_at && !o.declined_at);
+    const sets = r => r.reduce((s, o) => s + (+o.sets || 0), 0), money = r => r.reduce((s, o) => s + (+o.total || 0), 0);
     const decided = paid.length + declined.length, pickup = decided ? Math.round(100 * paid.length / decided) : null;
+    const metaSpend = ads && ads.meta_spend != null ? ads.meta_spend : null;
+    const manual = ads ? (+ads.manual_spend || 0) : 0;
+    const spend = (metaSpend || 0) + manual;
+    const live = orders.filter(o => !o.declined_at);
+    const perOrder = live.length && spend ? spend / live.length : null;
+    const profit = paid.length ? sets(paid) * PROFIT_PER_SET - spend : null;
+    const t = (l, v, s) => `<div class="tile"><b>${v}</b><span>${l}</span>${s ? `<div class="src">${s}</div>` : ''}</div>`;
     tiles.innerHTML = [
-      ['Заявок', orders.length, `${sets(orders)} компл.`],
-      ['Сплачено', paid.length, `${(sets(paid) * 950).toLocaleString('uk-UA')} ₴`],
-      ['Відправлено', shipped.length, `${sets(shipped)} компл.`],
-      ['Відмов', declined.length, ''],
-      ['Викуп', pickup == null ? '—' : pickup + '%', 'серед вирішених'],
-      ['У роботі', orders.length - paid.length - declined.length, 'без оплати'],
-    ].map(([l, v, s]) => `<div class="tile"><b>${v}</b><span>${l}</span>${s ? `<div class="src">${esc(s)}</div>` : ''}</div>`).join('');
+      t('Заявок', orders.length, `${esc(uah(money(orders)))} · ${sets(orders)} компл.`),
+      t('Сплачено', paid.length, `<b>${esc(uah(money(paid)))}</b>`),
+      t('Відправлено', shipped.length, esc(uah(money(shipped)))),
+      t('У роботі', work.length, esc(uah(money(work)))),
+      t('Відмов', declined.length, esc(uah(money(declined)))),
+      t('Викуп', pickup == null ? '—' : pickup + '%', 'серед вирішених'),
+      `<div class="tile tile--ads"><b>${metaSpend == null && !manual ? '—' : esc(uah(spend))}</b><span>Витрачено на рекламу</span>
+        <div class="src">Meta: ${metaSpend == null ? 'немає даних' : esc(uah(metaSpend))}${ads && ads.meta_today != null ? ` (сьогодні ${esc(uah(ads.meta_today))})` : ''}</div>
+        <form class="spend" id="spend-form"><label for="spend-amt" class="src">Інше (TikTok тощо)</label><input id="spend-amt" type="number" min="0" step="1" inputmode="numeric" value="${manual || ''}" placeholder="0"><input id="spend-note" type="text" value="${esc(ads ? ads.manual_note || '' : '')}" placeholder="коментар" maxlength="200"><button class="btn" type="submit">Зберегти</button></form></div>`,
+      t('Вартість заявки', perOrder == null ? '—' : esc(uah(perOrder)), 'реклама ÷ заявки без відмов'),
+      t('Прибуток', profit == null ? '—' : esc(uah(profit)), `сплачені × ${PROFIT_PER_SET} ₴ − реклама`),
+    ].join('');
+    const f = $('#spend-form'); if (f) f.addEventListener('submit', saveSpend);
+  };
+
+  const saveSpend = async e => {
+    e.preventDefault();
+    const amount = +$('#spend-amt').value || 0, note = $('#spend-note').value.trim();
+    const d = await api({ action: 'spend', amount, note }).catch(() => ({ ok: false, error: 'net' }));
+    if (d.ok) { ads = d.ads; toast('Витрати збережено'); renderTiles(); } else toast('Не збережено: ' + errText(d.error));
   };
 
   const render = () => {
@@ -204,7 +235,7 @@ h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
       if (d.error === 'auth' || d.error === 'locked') { logout(errText(d.error)); return false; }
       showState('Не вдалося завантажити', errText(d.error), true); return false;
     }
-    orders = d.orders || []; state.hidden = true;
+    orders = d.orders || []; ads = d.ads || ads; state.hidden = true;
     fresh.textContent = 'Оновлено ' + new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
     render(); return true;
   };
@@ -235,7 +266,7 @@ h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
     btn.disabled = false;
     if (!d.ok) { pass = ''; loginMsg.textContent = errText(d.error); return; }
     wr('lw_admin', pass, $('#remember').checked);
-    orders = d.orders || []; login.hidden = true; app.hidden = false; state.hidden = true;
+    orders = d.orders || []; ads = d.ads || ads; login.hidden = true; app.hidden = false; state.hidden = true;
     fresh.textContent = 'Оновлено ' + new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
     render();
   });
