@@ -136,7 +136,12 @@ h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
   const $ = (s, r = document) => r.querySelector(s);
   const login = $('#login'), app = $('#app'), list = $('#list'), state = $('#state'), tiles = $('#tiles'), fresh = $('#fresh'), loginMsg = $('#login-msg');
   let orders = [], ads = null, filter = 'all', query = '', pass = '', busy = new Set();
-  const PROFIT_PER_SET = 500; // чистий прибуток з комплекту (за даними власника)
+  const PRICE = 950;
+  // Собівартість комплекту за датою замовлення (Київ): до 16.10 — 450 ₴, з 16.10 — 500 ₴. Список приходить із сервера (admin_settings.cost_tiers).
+  let costTiers = [{ from: '2026-10-09', cost: 450 }, { from: '2026-10-16', cost: 500 }];
+  const kyivDate = iso => new Date(iso).toLocaleDateString('en-CA', { timeZone: 'Europe/Kyiv' });
+  const costOf = o => { const d = kyivDate(o.created_at); let c = costTiers[0].cost; for (const t of costTiers) if (d >= t.from) c = t.cost; return c; };
+  const marginOf = o => (+o.sets || 0) * (PRICE - costOf(o));
   const uah = n => (Math.round(n) || 0).toLocaleString('uk-UA') + ' ₴';
 
   const rd = (k) => { try { return sessionStorage.getItem(k) || localStorage.getItem(k) || ''; } catch (_) { return ''; } };
@@ -179,7 +184,9 @@ h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
     const spend = (metaSpend || 0) + manual;
     const live = orders.filter(o => !o.declined_at);
     const perOrder = live.length && spend ? spend / live.length : null;
-    const profit = paid.length ? sets(paid) * PROFIT_PER_SET - spend : null;
+    const margin = paid.reduce((s, o) => s + marginOf(o), 0);
+    const profit = paid.length ? margin - spend : null;
+    const costNow = costTiers[costTiers.length - 1].cost;
     const t = (l, v, s) => `<div class="tile"><b>${v}</b><span>${l}</span>${s ? `<div class="src">${s}</div>` : ''}</div>`;
     tiles.innerHTML = [
       t('Заявок', orders.length, `${esc(uah(money(orders)))} · ${sets(orders)} компл.`),
@@ -192,7 +199,7 @@ h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
         <div class="src">Meta: ${metaSpend == null ? 'немає даних' : esc(uah(metaSpend))}${ads && ads.meta_today != null ? ` (сьогодні ${esc(uah(ads.meta_today))})` : ''}</div>
         <form class="spend" id="spend-form"><label for="spend-amt" class="src">Інше (TikTok тощо)</label><input id="spend-amt" type="number" min="0" step="1" inputmode="numeric" value="${manual || ''}" placeholder="0"><input id="spend-note" type="text" value="${esc(ads ? ads.manual_note || '' : '')}" placeholder="коментар" maxlength="200"><button class="btn" type="submit">Зберегти</button></form></div>`,
       t('Вартість заявки', perOrder == null ? '—' : esc(uah(perOrder)), 'реклама ÷ заявки без відмов'),
-      t('Прибуток', profit == null ? '—' : esc(uah(profit)), `сплачені × ${PROFIT_PER_SET} ₴ − реклама`),
+      t('Прибуток', profit == null ? '—' : esc(uah(profit)), `маржа сплачених ${esc(uah(margin))} − реклама · собівартість зараз ${costNow} ₴/компл.`),
     ].join('');
     const f = $('#spend-form'); if (f) f.addEventListener('submit', saveSpend);
   };
@@ -216,7 +223,7 @@ h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
         <div style="display:grid;gap:4px;min-width:0">
           <div class="who"><b>${esc(o.name)}</b><span class="date">${fmtDate(o.created_at)}</span></div>
           <div class="meta"><span class="phone"><a href="${telHref(o.phone)}">${esc(o.phone)}</a></span><span>${esc(o.city)}</span><span>${esc(o.warehouse)}</span></div>
-          <div class="items"><span>${items}</span><span class="sum">${(+o.total || 0).toLocaleString('uk-UA')} ₴</span></div>
+          <div class="items"><span>${items}</span><span class="sum">${(+o.total || 0).toLocaleString('uk-UA')} ₴</span><span class="src">маржа ${esc(uah(marginOf(o)))} (собів. ${costOf(o)} ₴)</span></div>
           <div class="src">${src}${o.utm_term ? ` · ${esc(o.utm_term)}` : ''}${o.browser_kind ? ` · ${esc(o.browser_kind)}` : ''}</div>
         </div>
         <div class="flags">
@@ -235,7 +242,7 @@ h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
       if (d.error === 'auth' || d.error === 'locked') { logout(errText(d.error)); return false; }
       showState('Не вдалося завантажити', errText(d.error), true); return false;
     }
-    orders = d.orders || []; ads = d.ads || ads; state.hidden = true;
+    orders = d.orders || []; ads = d.ads || ads; if (ads && Array.isArray(ads.cost_tiers) && ads.cost_tiers.length) costTiers = ads.cost_tiers; state.hidden = true;
     fresh.textContent = 'Оновлено ' + new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
     render(); return true;
   };
@@ -266,7 +273,7 @@ h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
     btn.disabled = false;
     if (!d.ok) { pass = ''; loginMsg.textContent = errText(d.error); return; }
     wr('lw_admin', pass, $('#remember').checked);
-    orders = d.orders || []; ads = d.ads || ads; login.hidden = true; app.hidden = false; state.hidden = true;
+    orders = d.orders || []; ads = d.ads || ads; if (ads && Array.isArray(ads.cost_tiers) && ads.cost_tiers.length) costTiers = ads.cost_tiers; login.hidden = true; app.hidden = false; state.hidden = true;
     fresh.textContent = 'Оновлено ' + new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
     render();
   });
