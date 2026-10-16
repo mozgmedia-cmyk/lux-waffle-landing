@@ -25,7 +25,20 @@ html, body { margin: 0 }
 [hidden] { display: none !important }
 body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 15px; line-height: 1.45; padding-inline: 16px; padding-block: calc(16px + env(safe-area-inset-top, 0px)) calc(48px + env(safe-area-inset-bottom, 0px)) }
 .wrap { max-width: 1080px; margin-inline: auto; display: grid; gap: 18px }
-header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px }
+
+/* hero: photo banner, text sits on a soft gradient at the bottom-left; cropped by object-fit on every width */
+.hero { position: relative; border-radius: 14px; overflow: hidden; min-height: 180px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px; padding: 14px 16px; isolation: isolate; border: 1px solid var(--line) }
+.hero__pic { position: absolute; inset: 0; z-index: -2 }
+.hero__pic img { width: 100%; height: 100%; object-fit: cover; object-position: center 60%; display: block }
+.hero::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, rgba(20,14,10,0) 35%, rgba(20,14,10,.62) 100%) }
+.hero__text { color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.45); min-width: 0 }
+.hero__text h1 { color: #fff }
+.hero__text .sub { color: rgba(255,255,255,.88) }
+.hero__tools { justify-content: flex-end }
+.hero__tools .fresh { color: rgba(255,255,255,.85); text-shadow: 0 1px 2px rgba(0,0,0,.45) }
+.hero__tools .btn { background: rgba(255,253,249,.92); color: #241d18; border-color: transparent }
+@media (min-width: 561px) { .hero { min-height: 240px } }
+@media (max-width: 560px) { .hero { grid-template-columns: 1fr; min-height: 200px } .hero__tools { justify-content: flex-start } }
 h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
 .sub { color: var(--muted); font-size: .9rem; margin: 0 }
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px }
@@ -103,12 +116,16 @@ h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
 </form>
 
 <div class="wrap" id="app" hidden>
-  <header>
-    <div>
+  <header class="hero">
+    <picture class="hero__pic">
+      <source media="(max-width: 560px)" srcset="hero-mobile.jpg">
+      <img src="hero-desktop.jpg" alt="" width="1600" height="500" decoding="async" fetchpriority="high">
+    </picture>
+    <div class="hero__text">
       <h1>Замовлення Lux Waffle</h1>
-      <p class="sub">Натисніть позначку, щоб зафіксувати оплату, відправку або відмову.</p>
+      <p class="sub">Кожна позначка «Сплачено» — ще один комплект, який працює на нас.</p>
     </div>
-    <div class="toolbar">
+    <div class="toolbar hero__tools">
       <span class="fresh" id="fresh"></span>
       <button class="btn" id="refresh" type="button">Оновити</button>
       <button class="btn" id="logout" type="button">Вийти</button>
