@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Замовлення · Lux Waffle</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23B9553A'/%3E%3Ctext x='32' y='43' font-size='30' font-family='Georgia,serif' font-weight='700' text-anchor='middle' fill='%23fff'%3ELW%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+:root {
+  --bg: #f6f2ec; --panel: #fffdf9; --fg: #241d18; --muted: #7b6f64; --line: #e4dbd0;
+  --accent: #b9553a; --accent-fg: #ffffff;
+  --ok: #2f7d4f; --ok-bg: #e3f2e8; --bad: #a93a2e; --bad-bg: #f8e0dc; --info: #3b5f8a; --info-bg: #e3ebf5;
+  --font: "Manrope", "Segoe UI", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --bg: #1a1613; --panel: #241f1b; --fg: #f1ebe4; --muted: #a2968b; --line: #3a322c;
+  --accent: #d9765a; --accent-fg: #1a1613;
+  --ok: #7fcf9b; --ok-bg: #1e3326; --bad: #f09a8c; --bad-bg: #44231f; --info: #9dbbe0; --info-bg: #1f2d3f;
+  color-scheme: dark } }
+* { box-sizing: border-box }
+html, body { margin: 0 }
+body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 15px; line-height: 1.45; padding-inline: 16px; padding-block: calc(16px + env(safe-area-inset-top, 0px)) calc(48px + env(safe-area-inset-bottom, 0px)) }
+.wrap { max-width: 1080px; margin-inline: auto; display: grid; gap: 18px }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px }
+h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
+.sub { color: var(--muted); font-size: .9rem; margin: 0 }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px }
+.tile b { display: block; font-size: 1.5rem; font-variant-numeric: tabular-nums; line-height: 1.1 }
+.tile span { color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-spacing: .05em }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
+.chip { border: 1px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: .88rem; cursor: pointer }
+.chip[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg) }
+.chip:focus-visible, .flag:focus-visible, .btn:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+.search { flex: 1 1 180px; min-width: 0; border: 1px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 999px; padding: 7px 14px; font: inherit; font-size: .9rem }
+.btn { border: 1px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 8px; padding: 6px 12px; font: inherit; font-size: .88rem; cursor: pointer }
+.btn--primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 600; padding: 10px 16px }
+.list { display: grid; gap: 10px }
+.order { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; align-items: start }
+.order.declined { opacity: .6 }
+.who { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; min-width: 0 }
+.who b { font-size: 1.02rem }
+.who .date { color: var(--muted); font-size: .85rem; font-variant-numeric: tabular-nums }
+.meta { color: var(--muted); font-size: .88rem; display: flex; flex-wrap: wrap; gap: 2px 12px; min-width: 0 }
+.meta .phone { font-family: var(--mono); font-size: .84rem; color: var(--fg) }
+.meta .phone a { color: inherit; text-decoration: none; border-bottom: 1px dotted var(--muted) }
+.items { font-size: .92rem; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline }
+.items .sum { font-weight: 700; font-variant-numeric: tabular-nums }
+.src { font-size: .8rem; color: var(--muted) }
+.src code { font-family: var(--mono); font-size: .78rem; background: var(--info-bg); color: var(--info); padding: 1px 6px; border-radius: 6px }
+.flags { display: flex; flex-direction: column; gap: 6px; min-width: 150px }
+.flag { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 8px; padding: 8px 10px; font: inherit; font-size: .88rem; cursor: pointer; text-align: left; white-space: nowrap }
+.flag i { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--muted); display: inline-grid; place-items: center; font-style: normal; font-size: 11px; flex: none }
+.flag[aria-pressed="true"].paid { background: var(--ok-bg); color: var(--ok); border-color: transparent }
+.flag[aria-pressed="true"].shipped { background: var(--info-bg); color: var(--info); border-color: transparent }
+.flag[aria-pressed="true"].declined { background: var(--bad-bg); color: var(--bad); border-color: transparent }
+.flag[aria-pressed="true"] i { background: currentColor; border-color: currentColor }
+.flag[aria-pressed="true"] i::before { content: "✓"; color: var(--panel) }
+.flag:disabled { opacity: .5; cursor: progress }
+.flag small { color: var(--muted); font-size: .75rem; margin-left: auto; font-variant-numeric: tabular-nums }
+.note { grid-column: 1 / -1; display: flex; gap: 6px; align-items: center }
+.note input { flex: 1; min-width: 0; border: 1px solid transparent; background: transparent; color: var(--fg); font: inherit; font-size: .86rem; padding: 4px 6px; border-radius: 6px }
+.note input:hover, .note input:focus { border-color: var(--line); background: var(--bg) }
+.state { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: grid; gap: 10px }
+.state h2 { margin: 0; font-size: 1.05rem }
+.state p { margin: 0; color: var(--muted) }
+.state.err { border-color: var(--bad) }
+.login { max-width: 380px; margin: 10vh auto 0 }
+.login input { width: 100%; border: 1px solid var(--line); background: var(--bg); color: var(--fg); border-radius: 8px; padding: 10px 12px; font: inherit; font-size: 1rem }
+.login .msg { color: var(--bad); font-size: .88rem; min-height: 1.2em; margin: 0 }
+.toast { position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 999px; font-size: .88rem; box-shadow: 0 6px 20px rgba(0,0,0,.2); max-width: calc(100vw - 32px); text-align: center }
+.fresh { color: var(--muted); font-size: .8rem; font-variant-numeric: tabular-nums }
+@media (max-width: 560px) {
+  .order { grid-template-columns: 1fr }
+  .flags { flex-direction: row; flex-wrap: wrap }
+  .flag { flex: 1 1 auto }
+}
+@media (prefers-reduced-motion: no-preference) { .flag { transition: background .15s, color .15s } }
+</style>
+</head>
+<body>
+
+<form class="state login" id="login" autocomplete="off">
+  <h2>Замовлення Lux Waffle</h2>
+  <p>Введіть пароль, щоб відкрити список заявок.</p>
+  <label for="pass" class="sub">Пароль</label>
+  <input id="pass" name="pass" type="password" autocomplete="current-password" required>
+  <label class="sub" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="remember" style="width:auto"> Запамʼятати на цьому пристрої</label>
+  <p class="msg" id="login-msg"></p>
+  <button class="btn btn--primary" type="submit" id="login-btn">Увійти</button>
+</form>
+
+<div class="wrap" id="app" hidden>
+  <header>
+    <div>
+      <h1>Замовлення Lux Waffle</h1>
+      <p class="sub">Натисніть позначку, щоб зафіксувати оплату, відправку або відмову.</p>
+    </div>
+    <div class="toolbar">
+      <span class="fresh" id="fresh"></span>
+      <button class="btn" id="refresh" type="button">Оновити</button>
+      <button class="btn" id="logout" type="button">Вийти</button>
+    </div>
+  </header>
+
+  <section class="tiles" id="tiles" aria-label="Підсумок"></section>
+
+  <div class="toolbar" role="group" aria-label="Фільтр">
+    <button class="chip" type="button" data-f="all" aria-pressed="true">Усі</button>
+    <button class="chip" type="button" data-f="new" aria-pressed="false">Нові</button>
+    <button class="chip" type="button" data-f="paid" aria-pressed="false">Сплачені</button>
+    <button class="chip" type="button" data-f="shipped" aria-pressed="false">Відправлені</button>
+    <button class="chip" type="button" data-f="declined" aria-pressed="false">Відмови</button>
+    <input class="search" id="q" type="search" placeholder="Пошук: імʼя, телефон, місто" aria-label="Пошук">
+  </div>
+
+  <section class="state" id="state" hidden></section>
+  <section class="list" id="list"></section>
+</div>
+
+<script>
+(() => {
+  const API = 'https://abrgippumkwgraisdgui.supabase.co/functions/v1/luxwaffle-admin';
+  const $ = (s, r = document) => r.querySelector(s);
+  const login = $('#login'), app = $('#app'), list = $('#list'), state = $('#state'), tiles = $('#tiles'), fresh = $('#fresh'), loginMsg = $('#login-msg');
+  let orders = [], filter = 'all', query = '', pass = '', busy = new Set();
+
+  const rd = (k) => { try { return sessionStorage.getItem(k) || localStorage.getItem(k) || ''; } catch (_) { return ''; } };
+  const wr = (k, v, persist) => { try { sessionStorage.setItem(k, v); if (persist) localStorage.setItem(k, v); } catch (_) {} };
+  const clr = (k) => { try { sessionStorage.removeItem(k); localStorage.removeItem(k); } catch (_) {} };
+  try { filter = localStorage.getItem('lw_filter') || 'all'; } catch (_) {}
+  document.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c.dataset.f === filter)));
+
+  const fmtDate = iso => new Date(iso).toLocaleString('uk-UA', { timeZone: 'Europe/Kyiv', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const fmtShort = iso => new Date(iso).toLocaleDateString('uk-UA', { timeZone: 'Europe/Kyiv', day: '2-digit', month: '2-digit' });
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const telHref = p => 'tel:' + String(p || '').replace(/[^\d+]/g, '');
+
+  let toastT; const toast = msg => { let t = $('.toast'); if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); } t.textContent = msg; clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 2800); };
+  const showState = (title, text, isErr) => { state.hidden = false; state.classList.toggle('err', !!isErr); state.innerHTML = `<h2>${esc(title)}</h2><p>${esc(text)}</p>`; };
+
+  const api = async (body) => {
+    const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pass, ...body }) });
+    const d = await r.json().catch(() => ({ ok: false, error: 'json' }));
+    if (r.status === 401) { d.error = 'auth'; }
+    if (r.status === 429) { d.error = 'locked'; }
+    return d;
+  };
+  const errText = e => ({ auth: 'Невірний пароль.', locked: 'Забагато невдалих спроб. Зачекайте 15 хвилин.', db: 'База не відповіла. Спробуйте ще раз.', origin: 'Сторінку відкрито не з luxwaffle.in.ua.' }[e] || 'Щось пішло не так. Спробуйте «Оновити».');
+
+  const visible = () => orders.filter(o => {
+    const f = filter === 'all' || (filter === 'new' && !o.paid_at && !o.shipped_at && !o.declined_at) || (filter === 'paid' && o.paid_at) || (filter === 'shipped' && o.shipped_at) || (filter === 'declined' && o.declined_at);
+    if (!f) return false;
+    if (!query) return true;
+    return [o.name, o.phone, o.city, o.warehouse, o.utm_content].join(' ').toLowerCase().includes(query);
+  });
+
+  const renderTiles = () => {
+    const paid = orders.filter(o => o.paid_at), shipped = orders.filter(o => o.shipped_at), declined = orders.filter(o => o.declined_at);
+    const sets = r => r.reduce((s, o) => s + (+o.sets || 0), 0);
+    const decided = paid.length + declined.length, pickup = decided ? Math.round(100 * paid.length / decided) : null;
+    tiles.innerHTML = [
+      ['Заявок', orders.length, `${sets(orders)} компл.`],
+      ['Сплачено', paid.length, `${(sets(paid) * 950).toLocaleString('uk-UA')} ₴`],
+      ['Відправлено', shipped.length, `${sets(shipped)} компл.`],
+      ['Відмов', declined.length, ''],
+      ['Викуп', pickup == null ? '—' : pickup + '%', 'серед вирішених'],
+      ['У роботі', orders.length - paid.length - declined.length, 'без оплати'],
+    ].map(([l, v, s]) => `<div class="tile"><b>${v}</b><span>${l}</span>${s ? `<div class="src">${esc(s)}</div>` : ''}</div>`).join('');
+  };
+
+  const render = () => {
+    renderTiles();
+    const rows = visible();
+    if (!rows.length) { list.innerHTML = `<div class="state"><h2>Нічого не знайдено</h2><p>Змініть фільтр або пошук.</p></div>`; return; }
+    list.innerHTML = rows.map(o => {
+      const items = Array.isArray(o.items) ? o.items.map(([n, q]) => `${esc(n)} × ${q}`).join(', ') : '';
+      const src = o.utm_content ? `<code>${esc(o.utm_content)}</code>` : (o.utm_source ? esc(o.utm_source) : 'без мітки');
+      const flag = (k, label, at) => `<button class="flag ${k}" type="button" data-id="${o.id}" data-k="${k}" aria-pressed="${at ? 'true' : 'false'}" ${busy.has(o.id) ? 'disabled' : ''}><i aria-hidden="true"></i>${label}${at ? `<small>${fmtShort(at)}</small>` : ''}</button>`;
+      return `<article class="order${o.declined_at ? ' declined' : ''}" data-id="${o.id}">
+        <div style="display:grid;gap:4px;min-width:0">
+          <div class="who"><b>${esc(o.name)}</b><span class="date">${fmtDate(o.created_at)}</span></div>
+          <div class="meta"><span class="phone"><a href="${telHref(o.phone)}">${esc(o.phone)}</a></span><span>${esc(o.city)}</span><span>${esc(o.warehouse)}</span></div>
+          <div class="items"><span>${items}</span><span class="sum">${(+o.total || 0).toLocaleString('uk-UA')} ₴</span></div>
+          <div class="src">${src}${o.utm_term ? ` · ${esc(o.utm_term)}` : ''}${o.browser_kind ? ` · ${esc(o.browser_kind)}` : ''}</div>
+        </div>
+        <div class="flags">
+          ${flag('paid', 'Сплачено', o.paid_at)}
+          ${flag('shipped', 'Відправлено', o.shipped_at)}
+          ${flag('declined', 'Відмова', o.declined_at)}
+        </div>
+        <div class="note"><input type="text" id="note-${o.id}" data-id="${o.id}" value="${esc(o.admin_note || '')}" placeholder="Нотатка (ТТН, коментар)…" aria-label="Нотатка"></div>
+      </article>`;
+    }).join('');
+  };
+
+  const load = async () => {
+    const d = await api({ action: 'list' }).catch(() => ({ ok: false, error: 'net' }));
+    if (!d.ok) {
+      if (d.error === 'auth' || d.error === 'locked') { logout(errText(d.error)); return false; }
+      showState('Не вдалося завантажити', errText(d.error), true); return false;
+    }
+    orders = d.orders || []; state.hidden = true;
+    fresh.textContent = 'Оновлено ' + new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+    render(); return true;
+  };
+
+  const setFlag = async (id, k, on) => {
+    if (busy.has(id)) return;
+    busy.add(id); render();
+    const d = await api({ action: 'flag', id, k, on }).catch(() => ({ ok: false, error: 'net' }));
+    if (d.ok && d.order) { const o = orders.find(x => x.id === id); if (o) Object.assign(o, d.order); toast(on ? ({ paid: 'Позначено як сплачене', shipped: 'Позначено як відправлене', declined: 'Позначено як відмову' })[k] : 'Позначку знято'); }
+    else toast('Не збережено: ' + errText(d.error));
+    busy.delete(id); render();
+  };
+
+  const saveNote = async (id, text) => {
+    const o = orders.find(x => x.id === id); if (!o || (o.admin_note || '') === text) return;
+    const d = await api({ action: 'note', id, text }).catch(() => ({ ok: false, error: 'net' }));
+    if (d.ok) { o.admin_note = text; toast('Нотатку збережено'); } else toast('Нотатку не збережено: ' + errText(d.error));
+  };
+
+  const enter = async () => { login.hidden = true; app.hidden = false; const ok = await load(); if (ok) $('#q').value = ''; };
+  const logout = (msg) => { pass = ''; clr('lw_admin'); orders = []; app.hidden = true; login.hidden = false; loginMsg.textContent = msg || ''; $('#pass').value = ''; $('#pass').focus(); };
+
+  login.addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = $('#login-btn'); btn.disabled = true; loginMsg.textContent = '';
+    pass = $('#pass').value;
+    const d = await api({ action: 'list' }).catch(() => ({ ok: false, error: 'net' }));
+    btn.disabled = false;
+    if (!d.ok) { pass = ''; loginMsg.textContent = errText(d.error); return; }
+    wr('lw_admin', pass, $('#remember').checked);
+    orders = d.orders || []; login.hidden = true; app.hidden = false; state.hidden = true;
+    fresh.textContent = 'Оновлено ' + new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+    render();
+  });
+  list.addEventListener('click', e => { const b = e.target.closest('.flag'); if (b) setFlag(b.dataset.id, b.dataset.k, b.getAttribute('aria-pressed') !== 'true'); });
+  list.addEventListener('change', e => { const i = e.target.closest('.note input'); if (i) saveNote(i.dataset.id, i.value.trim()); });
+  document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => { filter = c.dataset.f; try { localStorage.setItem('lw_filter', filter); } catch (_) {} document.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', String(x === c))); render(); }));
+  $('#q').addEventListener('input', e => { query = e.target.value.trim().toLowerCase(); render(); });
+  $('#refresh').addEventListener('click', load);
+  $('#logout').addEventListener('click', () => logout(''));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && pass) load(); });
+
+  pass = rd('lw_admin');
+  if (pass) enter(); else $('#pass').focus();
+})();
+</script>
+</body>
+</html>
