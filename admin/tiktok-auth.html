@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>TikTok авторизація · Lux Waffle</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", system-ui, sans-serif; background: #f6f2ec; color: #241d18; margin: 0; padding: 32px 16px }
+  .box { max-width: 560px; margin: 8vh auto 0; background: #fffdf9; border: 1px solid #e4dbd0; border-radius: 12px; padding: 20px }
+  h1 { font-size: 1.2rem; margin: 0 0 8px } p { margin: 6px 0; color: #7b6f64 }
+  code { display: block; background: #f6f2ec; padding: 10px; border-radius: 8px; word-break: break-all; margin: 10px 0; font-size: .9rem; user-select: all }
+  button { border: 0; background: #b9553a; color: #fff; border-radius: 8px; padding: 10px 14px; font: inherit; cursor: pointer }
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>TikTok Marketing API — авторизація</h1>
+  <p id="msg">Очікую код авторизації від TikTok…</p>
+  <code id="code" hidden></code>
+  <button id="copy" type="button" hidden>Скопіювати код</button>
+  <p id="hint" hidden>Надішліть цей код у чат з Claude: він обміняє його на токен доступу й підключить звіти в адмінку.</p>
+</div>
+<script>
+(() => {
+  const q = new URLSearchParams(location.search);
+  const code = q.get('auth_code') || q.get('code') || '';
+  const msg = document.getElementById('msg'), el = document.getElementById('code'), btn = document.getElementById('copy'), hint = document.getElementById('hint');
+  if (!code) { msg.textContent = 'Код авторизації не отримано. Відкрийте цю сторінку через посилання авторизації з TikTok Developer Portal.'; return; }
+  msg.textContent = 'Авторизація пройшла. Код:'; el.textContent = code; el.hidden = false; btn.hidden = false; hint.hidden = false;
+  btn.addEventListener('click', async () => { try { await navigator.clipboard.writeText(code); btn.textContent = 'Скопійовано'; } catch (_) { el.focus(); } });
+})();
+</script>
+</body>
+</html>
