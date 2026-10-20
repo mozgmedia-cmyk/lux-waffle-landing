@@ -302,6 +302,8 @@
       const res = await r.json().catch(() => ({}));
       if (!r.ok || !res.ok) throw new Error(res.error || r.status);
       fbTrack('Lead', { value: leadValue, currency: 'UAH', num_items: leadSets }, res.id);
+      // Замовлення = покупка (оплата при отриманні): ціль кампаній Meta «Продажі» оптимізується на Purchase
+      fbTrack('Purchase', { value: leadValue, currency: 'UAH', num_items: leadSets, content_type: 'product', content_name: 'Waffle towel set' }, res.id);
       ttTrack('SubmitForm', { value: leadValue, currency: 'UAH', content_name: 'Waffle towel set' }, res.id);
       msgBox.hidden = false; msgBox.className = 'form-ok'; msgBox.setAttribute('role', 'status');
       msgBox.textContent = 'Дякуємо! Заявку отримано. Ми зв’яжемося з Вами, щоб підтвердити деталі замовлення.';
