@@ -107,6 +107,99 @@
     render();
   });
 
+  /* ---------- zoom viewer for swatch photos: pinch / double-tap zoom, pan, swipe between colours, swipe down to close ---------- */
+  (function lightbox() {
+    const lb = $('#lb'); if (!lb || !lb.showModal) return;
+    const stage = $('#lb-stage'), img = $('#lb-img'), hint = $('#lb-hint'), addBtn = $('#lb-add');
+    const cards = [...document.querySelectorAll('.swatch')];
+    const webp = (() => { try { return document.createElement('canvas').toDataURL('image/webp').startsWith('data:image/webp'); } catch (_) { return false; } })();
+    let cur = 0, s = 1, tx = 0, ty = 0, opened = false, hintTimer = 0;
+    const MAX = 4;
+    const apply = anim => { img.classList.toggle('is-anim', !!anim); img.style.transform = `translate(${tx}px,${ty}px) scale(${s})`; };
+    const clamp = () => {  // keep the zoomed photo covering the stage, no empty gaps
+      const mx = Math.max(0, (img.offsetWidth * s - stage.clientWidth) / 2), my = Math.max(0, (img.offsetHeight * s - stage.clientHeight) / 2);
+      tx = Math.min(mx, Math.max(-mx, tx)); ty = Math.min(my, Math.max(-my, ty));
+    };
+    const reset = anim => { s = 1; tx = 0; ty = 0; apply(anim); };
+    const syncAdd = () => { const q = qty[cur]; addBtn.textContent = q ? `У замовленні: ${q} ✓  +1` : 'Додати в замовлення'; };
+    function show(i) {
+      cur = (i + cards.length) % cards.length;
+      const b = cards[cur].querySelector('.swatch__img'), thumb = b.querySelector('img');
+      reset(false); img.style.opacity = '1';
+      img.src = thumb.currentSrc || thumb.src;                       // instant: the already loaded thumbnail
+      img.alt = 'Вафельні рушники, колір ' + COLORS[cur].toLowerCase();
+      const hi = new Image(), url = b.dataset.full + (webp ? '.webp' : '.jpg'), want = cur;
+      hi.onload = () => { if (want === cur && opened) img.src = url; }; hi.src = url;   // then the 1600px version for details
+      $('#lb-name').textContent = COLORS[cur]; $('#lb-count').textContent = `${cur + 1} / ${cards.length}`;
+      syncAdd();
+    }
+    function open(i) {
+      show(i); lb.showModal(); opened = true; document.documentElement.style.overflow = 'hidden';
+      try { history.pushState({ lb: 1 }, ''); } catch (_) {}
+      hint.classList.remove('is-hidden'); clearTimeout(hintTimer); hintTimer = setTimeout(() => hint.classList.add('is-hidden'), 3500);
+      evtOnce('PhotoZoom', { color: COLORS[i] });
+    }
+    function close(fromHistory) {
+      if (!opened) return; opened = false; lb.close(); document.documentElement.style.overflow = '';
+      if (!fromHistory) { try { if (history.state && history.state.lb) history.back(); } catch (_) {} }
+    }
+    addEventListener('popstate', () => close(true));            // Android "back" closes the viewer, not the page
+    lb.addEventListener('cancel', e => { e.preventDefault(); close(); });
+    $('#lb-close').addEventListener('click', () => close());
+    $('#lb-prev').addEventListener('click', () => show(cur - 1));
+    $('#lb-next').addEventListener('click', () => show(cur + 1));
+    lb.addEventListener('keydown', e => { if (e.key === 'ArrowLeft') show(cur - 1); else if (e.key === 'ArrowRight') show(cur + 1); });
+    addBtn.addEventListener('click', () => { cards[cur].querySelector('button[data-d="1"]').click(); syncAdd(); });
+    $('#swatches').addEventListener('click', e => { const b = e.target.closest('.swatch__img'); if (b) open(+b.closest('.swatch').dataset.i); });
+
+    // gestures (pointer events): 2 fingers = pinch, 1 finger = pan when zoomed / swipe when not
+    const pts = new Map(); let g = null, lastTap = 0, lastX = 0, lastY = 0;
+    const rel = (x, y) => { const r = stage.getBoundingClientRect(); return [x - r.left - r.width / 2, y - r.top - r.height / 2]; };
+    const zoomAt = (ns, px, py) => { ns = Math.min(MAX, Math.max(1, ns)); tx = px - (px - tx) * ns / s; ty = py - (py - ty) * ns / s; s = ns; if (s === 1) { tx = 0; ty = 0; } clamp(); };
+    stage.addEventListener('pointerdown', e => {
+      if (e.target.closest('button')) return;
+      try { stage.setPointerCapture(e.pointerId); } catch (_) {} pts.set(e.pointerId, [e.clientX, e.clientY]); hint.classList.add('is-hidden');
+      const p = [...pts.values()];
+      if (p.length === 2) {
+        const [a, b] = p, m = rel((a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+        g = { pinch: true, d: Math.hypot(a[0] - b[0], a[1] - b[1]), s0: s, tx0: tx, ty0: ty, m };
+      } else g = { x: e.clientX, y: e.clientY, tx0: tx, ty0: ty, t: Date.now(), moved: false };
+    });
+    stage.addEventListener('pointermove', e => {
+      if (!pts.has(e.pointerId) || !g) return; pts.set(e.pointerId, [e.clientX, e.clientY]);
+      if (g.pinch && pts.size === 2) {
+        const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+        const ns = Math.min(MAX, Math.max(1, g.s0 * d / g.d));
+        tx = g.m[0] - (g.m[0] - g.tx0) * ns / g.s0; ty = g.m[1] - (g.m[1] - g.ty0) * ns / g.s0; s = ns; clamp(); apply(false); return;
+      }
+      if (g.pinch) return;
+      const dx = e.clientX - g.x, dy = e.clientY - g.y; if (Math.abs(dx) + Math.abs(dy) > 8) g.moved = true;
+      if (s > 1) { tx = g.tx0 + dx; ty = g.ty0 + dy; clamp(); apply(false); }
+      else { tx = dx; ty = Math.max(0, dy) * (Math.abs(dy) > Math.abs(dx) ? 1 : 0); img.style.opacity = String(1 - Math.min(.5, ty / 600)); apply(false); }
+    });
+    const end = e => {
+      if (!pts.has(e.pointerId)) return; pts.delete(e.pointerId);
+      if (!g) return;
+      if (g.pinch) { if (pts.size === 0) { if (s < 1.05) reset(true); g = null; } return; }
+      const dx = e.clientX - g.x, dy = e.clientY - g.y;
+      if (!g.moved) {  // tap: double tap toggles zoom at the finger
+        const now = Date.now();
+        if (now - lastTap < 300 && Math.hypot(e.clientX - lastX, e.clientY - lastY) < 40) {
+          if (s > 1) reset(true); else { const [px, py] = rel(e.clientX, e.clientY); zoomAt(2.5, px, py); apply(true); }
+          lastTap = 0;
+        } else { lastTap = now; lastX = e.clientX; lastY = e.clientY; }
+      } else if (s === 1) {
+        if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) show(cur + (dx < 0 ? 1 : -1));
+        else if (dy > 110) close();
+        else { img.style.opacity = '1'; reset(true); }
+      }
+      g = null;
+    };
+    stage.addEventListener('pointerup', end); stage.addEventListener('pointercancel', end);
+    stage.addEventListener('wheel', e => { e.preventDefault(); const [px, py] = rel(e.clientX, e.clientY); zoomAt(s * (e.deltaY < 0 ? 1.2 : 1 / 1.2), px, py); apply(false); }, { passive: false });
+    addEventListener('resize', () => { if (opened) { clamp(); apply(false); } });
+  })();
+
   function render() {
     const items = COLORS.map((n, i) => [n, qty[i]]).filter(x => x[1] > 0), n = sets();
     $('#lines').innerHTML = items.length
