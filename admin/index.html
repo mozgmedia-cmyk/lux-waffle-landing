@@ -95,6 +95,22 @@ h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
 .login .msg { color: var(--bad); font-size: .88rem; min-height: 1.2em; margin: 0 }
 .toast { position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 999px; font-size: .88rem; box-shadow: 0 6px 20px rgba(0,0,0,.2); max-width: calc(100vw - 32px); text-align: center }
 .fresh { color: var(--muted); font-size: .8rem; font-variant-numeric: tabular-nums }
+/* Нова Пошта: рядок посилки в замовленні, плитка синхронізації, ТТН без замовлення */
+.np { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: .84rem }
+.np a { font-family: var(--mono); font-size: .8rem; color: inherit; text-decoration: none; border-bottom: 1px dotted var(--muted) }
+.np .pill { border-radius: 999px; padding: 1px 8px; font-weight: 600; font-size: .78rem; background: var(--info-bg); color: var(--info) }
+.np .pill.received { background: var(--ok-bg); color: var(--ok) }
+.np .pill.refused, .np .pill.deleted { background: var(--bad-bg); color: var(--bad) }
+.np .pill.arrived { background: #fbecd0; color: #8a5a10 }
+.np .pill.arrived.late { background: var(--bad-bg); color: var(--bad) }
+@media (prefers-color-scheme: dark) { .np .pill.arrived { background: #3d2f17; color: #f0c477 } }
+.np .muted { color: var(--muted) }
+.tile--np .src.err { color: var(--bad) }
+.tile--np .btn { margin-top: 8px }
+.unmatched { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px }
+.unmatched summary { cursor: pointer; font-weight: 600; font-size: .92rem }
+.unmatched ul { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 6px }
+.unmatched li { font-size: .86rem; display: flex; flex-wrap: wrap; gap: 2px 10px }
 @media (max-width: 560px) {
   .order { grid-template-columns: 1fr }
   .flags { flex-direction: row; flex-wrap: wrap }
@@ -140,19 +156,21 @@ h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
     <button class="chip" type="button" data-f="paid" aria-pressed="false">Сплачені</button>
     <button class="chip" type="button" data-f="shipped" aria-pressed="false">Відправлені</button>
     <button class="chip" type="button" data-f="declined" aria-pressed="false">Відмови</button>
+    <button class="chip" type="button" data-f="arrived" aria-pressed="false">На пошті</button>
     <input class="search" id="q" type="search" placeholder="Пошук: імʼя, телефон, місто" aria-label="Пошук">
   </div>
 
   <section class="state" id="state" hidden></section>
   <section class="list" id="list"></section>
+  <details class="unmatched" id="unmatched" hidden></details>
 </div>
 
 <script>
 (() => {
   const API = 'https://abrgippumkwgraisdgui.supabase.co/functions/v1/luxwaffle-admin';
   const $ = (s, r = document) => r.querySelector(s);
-  const login = $('#login'), app = $('#app'), list = $('#list'), state = $('#state'), tiles = $('#tiles'), fresh = $('#fresh'), loginMsg = $('#login-msg');
-  let orders = [], ads = null, filter = 'all', query = '', pass = '', busy = new Set();
+  const unmatchedEl = $('#unmatched'), login = $('#login'), app = $('#app'), list = $('#list'), state = $('#state'), tiles = $('#tiles'), fresh = $('#fresh'), loginMsg = $('#login-msg');
+  let orders = [], ads = null, np = null, npBusy = false, filter = 'all', query = '', pass = '', busy = new Set();
   const PRICE = 950;
   // Собівартість комплекту за датою замовлення (Київ): до 16.10 — 450 ₴, з 16.10 — 500 ₴. Список приходить із сервера (admin_settings.cost_tiers).
   let costTiers = [{ from: '2026-10-09', cost: 450 }, { from: '2026-10-16', cost: 500 }];
@@ -171,6 +189,19 @@ h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
   const fmtShort = iso => new Date(iso).toLocaleDateString('uk-UA', { timeZone: 'Europe/Kyiv', day: '2-digit', month: '2-digit' });
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const telHref = p => 'tel:' + String(p || '').replace(/[^\d+]/g, '');
+  // Нова Пошта: остання посилка замовлення і її стан
+  const NP_KIND = { received: 'Отримано', refused: 'Відмова / повернення', arrived: 'На відділенні', transit: 'В дорозі', created: 'Створено ТТН', deleted: 'ТТН видалено', notfound: 'Не знайдено' };
+  const shipOf = o => (Array.isArray(o.np_shipments) && o.np_shipments.length) ? [...o.np_shipments].sort((a, b) => String(b.created_date).localeCompare(String(a.created_date)))[0] : null;
+  const daysSince = iso => iso ? Math.floor((Date.now() - new Date(iso)) / 864e5) : 0;
+  const npTrack = ttn => `https://novaposhta.ua/tracking/?cargo_number=${encodeURIComponent(ttn)}`;
+  const npLine = o => {
+    const sh = shipOf(o); if (!sh) return '';
+    const k = sh.kind || 'created', wait = k === 'arrived' ? daysSince(sh.arrived_at) : 0;
+    const when = k === 'received' && sh.received_at ? ` ${fmtShort(sh.received_at)}` : k === 'arrived' && sh.arrived_at ? ` з ${fmtShort(sh.arrived_at)} (${wait} дн.)` : '';
+    const paidFrom = k === 'arrived' && sh.storage_paid_from ? `<span class="muted">платне зберігання з ${esc(sh.storage_paid_from.split('-').reverse().slice(0, 2).join('.'))}</span>` : '';
+    const money = sh.money_status ? `<span class="muted">переказ: ${esc(sh.money_status)}</span>` : '';
+    return `<div class="np"><span aria-hidden="true">📦</span><a href="${npTrack(sh.ttn)}" target="_blank" rel="noopener">${esc(sh.ttn)}</a><span class="pill ${esc(k)}${wait >= 3 ? ' late' : ''}" title="${esc(sh.status || '')}">${esc(NP_KIND[k] || k)}${when}</span>${paidFrom}${money}</div>`;
+  };
 
   let toastT; const toast = msg => { let t = $('.toast'); if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); } t.textContent = msg; clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 2800); };
   const showState = (title, text, isErr) => { state.hidden = false; state.classList.toggle('err', !!isErr); state.innerHTML = `<h2>${esc(title)}</h2><p>${esc(text)}</p>`; };
@@ -185,7 +216,7 @@ h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
   const errText = e => ({ auth: 'Невірний пароль.', locked: 'Забагато невдалих спроб. Зачекайте 15 хвилин.', db: 'База не відповіла. Спробуйте ще раз.', origin: 'Сторінку відкрито не з luxwaffle.in.ua.' }[e] || 'Щось пішло не так. Спробуйте «Оновити».');
 
   const visible = () => orders.filter(o => {
-    const f = filter === 'all' || (filter === 'new' && !o.paid_at && !o.shipped_at && !o.declined_at) || (filter === 'paid' && o.paid_at) || (filter === 'shipped' && o.shipped_at) || (filter === 'declined' && o.declined_at);
+    const f = filter === 'all' || (filter === 'new' && !o.paid_at && !o.shipped_at && !o.declined_at) || (filter === 'paid' && o.paid_at) || (filter === 'shipped' && o.shipped_at) || (filter === 'declined' && o.declined_at) || (filter === 'arrived' && shipOf(o)?.kind === 'arrived');
     if (!f) return false;
     if (!query) return true;
     return [o.name, o.phone, o.city, o.warehouse, o.utm_content].join(' ').toLowerCase().includes(query);
@@ -217,8 +248,34 @@ h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
         <form class="spend" id="spend-form"><label for="spend-amt" class="src">Інше (TikTok тощо)</label><input id="spend-amt" type="number" min="0" step="1" inputmode="numeric" value="${manual || ''}" placeholder="0"><input id="spend-note" type="text" value="${esc(ads ? ads.manual_note || '' : '')}" placeholder="коментар" maxlength="200"><button class="btn" type="submit">Зберегти</button></form></div>`,
       t('Вартість заявки', perOrder == null ? '—' : esc(uah(perOrder)), 'реклама ÷ заявки без відмов'),
       t('Прибуток', profit == null ? '—' : esc(uah(profit)), `маржа сплачених ${esc(uah(margin))} − реклама · собівартість зараз ${costNow} ₴/компл.`),
+      npTile(),
     ].join('');
+    const nb = $('#np-sync'); if (nb) nb.addEventListener('click', npSync);
     const f = $('#spend-form'); if (f) f.addEventListener('submit', saveSpend);
+  };
+
+  const npTile = () => {
+    const last = np && np.last, ships = orders.map(shipOf).filter(Boolean);
+    const arrived = ships.filter(x => x.kind === 'arrived').length, transit = ships.filter(x => x.kind === 'transit' || x.kind === 'created').length;
+    const errs = { no_key: 'Додайте API-ключ НП у Supabase (секрет NP_API_KEY)' };
+    const st = !last ? 'ще не синхронізовано' : last.ok ? `синхр. ${esc(fmtDate(last.at))}` : `<span class="err">${esc(errs[last.error] || 'помилка: ' + (last.error || ''))}</span>`;
+    return `<div class="tile tile--ads tile--np"><b>${arrived}</b><span>На відділенні НП</span>
+      <div class="src">в дорозі ${transit} · ${st}</div>
+      <button class="btn" type="button" id="np-sync" ${npBusy ? 'disabled' : ''}>${npBusy ? 'Синхронізую…' : 'Оновити з Нової Пошти'}</button></div>`;
+  };
+  const renderUnmatched = () => {
+    const rows = (np && np.unmatched) || [];
+    unmatchedEl.hidden = !rows.length; if (!rows.length) { unmatchedEl.innerHTML = ''; return; }
+    unmatchedEl.innerHTML = `<summary>ТТН без замовлення з сайту: ${rows.length}</summary>
+      <p class="sub" style="margin-top:6px">Посилки з кабінету НП, які не збіглися з заявкою за телефоном. Щоб привʼязати — впишіть ТТН у нотатку потрібного замовлення.</p>
+      <ul>${rows.map(r => `<li><a class="phone" href="${npTrack(r.ttn)}" target="_blank" rel="noopener">${esc(r.ttn)}</a><span>${esc(r.recipient_name || '')}</span><span class="phone">${esc(r.recipient_phone || '')}</span><span class="sub">${r.created_date ? esc(fmtShort(r.created_date)) : ''} · ${esc(NP_KIND[r.kind] || '—')}</span></li>`).join('')}</ul>`;
+  };
+  const npSync = async () => {
+    if (npBusy) return; npBusy = true; renderTiles();
+    const d = await api({ action: 'np_sync' }).catch(() => ({ ok: false, error: 'net' }));
+    npBusy = false;
+    if (d.ok) { orders = d.orders || orders; ads = d.ads || ads; np = d.np || np; render(); toast(np && np.last && np.last.ok ? `Нова Пошта: оновлено ${np.last.tracked ?? 0} посилок, змін ${np.last.changed ?? 0}` : 'Нова Пошта: не вдалося синхронізувати'); }
+    else { renderTiles(); toast('Не вдалося: ' + errText(d.error)); }
   };
 
   const saveSpend = async e => {
@@ -229,7 +286,7 @@ h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
   };
 
   const render = () => {
-    renderTiles();
+    renderTiles(); renderUnmatched();
     const rows = visible();
     if (!rows.length) { list.innerHTML = `<div class="state"><h2>Нічого не знайдено</h2><p>Змініть фільтр або пошук.</p></div>`; return; }
     list.innerHTML = rows.map(o => {
@@ -242,6 +299,7 @@ h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
           <div class="meta"><span class="phone"><a href="${telHref(o.phone)}">${esc(o.phone)}</a></span><span>${esc(o.city)}</span><span>${esc(o.warehouse)}</span></div>
           <div class="items"><span>${items}</span><span class="sum">${(+o.total || 0).toLocaleString('uk-UA')} ₴</span><span class="src">маржа ${esc(uah(marginOf(o)))} (собів. ${costOf(o)} ₴)</span></div>
           <div class="src">${src}${o.utm_term ? ` · ${esc(o.utm_term)}` : ''}${o.browser_kind ? ` · ${esc(o.browser_kind)}` : ''}</div>
+          ${npLine(o)}
         </div>
         <div class="flags">
           ${flag('paid', 'Сплачено', o.paid_at)}
@@ -259,7 +317,7 @@ h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
       if (d.error === 'auth' || d.error === 'locked') { logout(errText(d.error)); return false; }
       showState('Не вдалося завантажити', errText(d.error), true); return false;
     }
-    orders = d.orders || []; ads = d.ads || ads; if (ads && Array.isArray(ads.cost_tiers) && ads.cost_tiers.length) costTiers = ads.cost_tiers; state.hidden = true;
+    orders = d.orders || []; ads = d.ads || ads; np = d.np || np; if (ads && Array.isArray(ads.cost_tiers) && ads.cost_tiers.length) costTiers = ads.cost_tiers; state.hidden = true;
     fresh.textContent = 'Оновлено ' + new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
     render(); return true;
   };
@@ -290,7 +348,7 @@ h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
     btn.disabled = false;
     if (!d.ok) { pass = ''; loginMsg.textContent = errText(d.error); return; }
     wr('lw_admin', pass, $('#remember').checked);
-    orders = d.orders || []; ads = d.ads || ads; if (ads && Array.isArray(ads.cost_tiers) && ads.cost_tiers.length) costTiers = ads.cost_tiers; login.hidden = true; app.hidden = false; state.hidden = true;
+    orders = d.orders || []; ads = d.ads || ads; np = d.np || np; if (ads && Array.isArray(ads.cost_tiers) && ads.cost_tiers.length) costTiers = ads.cost_tiers; login.hidden = true; app.hidden = false; state.hidden = true;
     fresh.textContent = 'Оновлено ' + new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
     render();
   });
