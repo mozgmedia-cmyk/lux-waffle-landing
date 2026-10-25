@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Склад · Lux Waffle</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23B9553A'/%3E%3Ctext x='32' y='43' font-size='30' font-family='Georgia,serif' font-weight='700' text-anchor='middle' fill='%23fff'%3ELW%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700&display=swap">
+<style>
+:root {
+  --bg: #f6f2ec; --panel: #fffdf9; --fg: #241d18; --muted: #7b6f64; --line: #e4dbd0;
+  --accent: #b9553a; --accent-fg: #ffffff;
+  --ok: #2f7d4f; --ok-bg: #e3f2e8; --bad: #a93a2e; --bad-bg: #f8e0dc; --warn: #8a5a10; --warn-bg: #fbecd0; --info: #3b5f8a; --info-bg: #e3ebf5;
+  --font: "Manrope", "Segoe UI", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --bg: #1a1613; --panel: #241f1b; --fg: #f1ebe4; --muted: #a2968b; --line: #3a322c;
+  --accent: #d9765a; --accent-fg: #1a1613;
+  --ok: #7fcf9b; --ok-bg: #1e3326; --bad: #f09a8c; --bad-bg: #44231f; --warn: #f0c477; --warn-bg: #3d2f17; --info: #9dbbe0; --info-bg: #1f2d3f;
+  color-scheme: dark } }
+* { box-sizing: border-box }
+html, body { margin: 0 }
+[hidden] { display: none !important }
+body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 15px; line-height: 1.45; padding-inline: 16px; padding-block: calc(16px + env(safe-area-inset-top, 0px)) calc(48px + env(safe-area-inset-bottom, 0px)) }
+.wrap { max-width: 1080px; margin-inline: auto; display: grid; gap: 16px }
+h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
+h2 { font-size: 1.05rem; margin: 0 }
+.sub { color: var(--muted); font-size: .88rem; margin: 0 }
+.head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px }
+.tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap }
+.btn { border: 1px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 8px; padding: 7px 12px; font: inherit; font-size: .88rem; cursor: pointer }
+.btn--primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 600; padding: 10px 16px }
+.btn:disabled { opacity: .5; cursor: progress }
+.btn:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px }
+.tile b { display: block; font-size: 1.5rem; font-variant-numeric: tabular-nums; line-height: 1.1 }
+.tile span { color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .05em }
+.tile.hot b { color: var(--accent) }
+.note { border-radius: 10px; padding: 10px 14px; font-size: .9rem; background: var(--warn-bg); color: var(--warn) }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; gap: 10px }
+.card__top { display: flex; align-items: center; gap: 10px }
+.dot { width: 22px; height: 22px; border-radius: 50%; flex: none; border: 1px solid rgba(0,0,0,.15) }
+.card__name { font-weight: 700; font-size: 1.02rem; flex: 1; min-width: 0 }
+.need { text-align: right; line-height: 1.1 }
+.need b { display: block; font-size: 1.35rem; font-variant-numeric: tabular-nums }
+.need small { color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .04em }
+.need.hot b { color: var(--accent) }
+.need.zero b { color: var(--ok) }
+.stats { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .86rem; color: var(--muted) }
+.stats b { color: var(--fg); font-variant-numeric: tabular-nums }
+.stocks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
+.stock { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; display: grid; gap: 4px }
+.stock label { font-size: .76rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em }
+.stock .val { font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums }
+.stock .val.neg { color: var(--bad) }
+.stock input { width: 100%; border: 1px solid var(--line); background: var(--bg); color: var(--fg); border-radius: 8px; padding: 6px 8px; font: inherit; font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums }
+.stock .short { font-size: .76rem; color: var(--warn) }
+.stock.mine { border-color: var(--accent) }
+details.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px }
+details.panel summary { cursor: pointer; font-weight: 700 }
+details.panel[open] summary { margin-bottom: 10px }
+.dgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-bottom: 10px }
+.dgrid label { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font-size: .88rem }
+.dgrid label span { flex: 1; min-width: 0 }
+.dgrid input { width: 64px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); border-radius: 6px; padding: 4px 6px; font: inherit; text-align: right }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center }
+.row input[type=text], .row input[type=password] { flex: 1 1 200px; min-width: 0; border: 1px solid var(--line); background: var(--bg); color: var(--fg); border-radius: 8px; padding: 8px 10px; font: inherit }
+.moves { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px }
+.moves li { display: flex; flex-wrap: wrap; gap: 2px 10px; font-size: .86rem; border-bottom: 1px dashed var(--line); padding-bottom: 6px }
+.moves .when { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 92px }
+.moves .d { font-weight: 700; font-variant-numeric: tabular-nums }
+.moves .d.plus { color: var(--ok) } .moves .d.minus { color: var(--bad) }
+.state { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: grid; gap: 10px }
+.state.err { border-color: var(--bad) }
+.login { max-width: 380px; margin: 10vh auto 0 }
+.login input[type=password] { width: 100%; border: 1px solid var(--line); background: var(--bg); color: var(--fg); border-radius: 8px; padding: 10px 12px; font: inherit; font-size: 1rem }
+.login .msg { color: var(--bad); font-size: .88rem; min-height: 1.2em; margin: 0 }
+.toast { position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 999px; font-size: .88rem; box-shadow: 0 6px 20px rgba(0,0,0,.2); max-width: calc(100vw - 32px); text-align: center }
+</style>
+</head>
+<body>
+
+<form class="state login" id="login" autocomplete="off">
+  <h2>Склад Lux Waffle</h2>
+  <p class="sub">Введіть пароль, щоб відкрити залишки та замовлення по кольорах.</p>
+  <label for="pass" class="sub">Пароль</label>
+  <input id="pass" name="pass" type="password" autocomplete="current-password" required>
+  <label class="sub" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="remember"> Запамʼятати на цьому пристрої</label>
+  <p class="msg" id="login-msg"></p>
+  <button class="btn btn--primary" type="submit" id="login-btn">Увійти</button>
+</form>
+
+<div class="wrap" id="app" hidden>
+  <header class="head">
+    <div>
+      <h1>Склад Lux Waffle</h1>
+      <p class="sub" id="who"></p>
+    </div>
+    <div class="tools">
+      <a class="btn" id="to-admin" href="../admin/" hidden>Замовлення</a>
+      <button class="btn" id="refresh" type="button">Оновити</button>
+      <button class="btn" id="logout" type="button">Вийти</button>
+    </div>
+  </header>
+
+  <section class="tiles" id="tiles" aria-label="Підсумок"></section>
+  <div class="note" id="hint" hidden></div>
+  <p class="sub">Рахуємо в комплектах (великий + малий рушник). «Треба пошити» = невідправлені замовлення − склад у Тані − склад у Людмили.</p>
+  <section class="grid" id="grid"></section>
+
+  <details class="panel" id="delivery">
+    <summary>Поставка від Людмили Тані</summary>
+    <p class="sub" style="margin-bottom:10px">Скільки комплектів передано: спишеться зі складу Людмили й додасться Тані.</p>
+    <form id="delivery-form">
+      <div class="dgrid" id="dgrid"></div>
+      <div class="row"><input type="text" id="d-note" maxlength="200" placeholder="Коментар (ТТН, дата)"><button class="btn btn--primary" type="submit">Записати поставку</button></div>
+    </form>
+  </details>
+
+  <details class="panel" id="sp-panel" hidden>
+    <summary>Доступ для Людмили</summary>
+    <p class="sub" id="sp-state" style="margin-bottom:10px"></p>
+    <form class="row" id="sp-form" autocomplete="off">
+      <input type="password" id="sp-pass" minlength="8" maxlength="200" placeholder="Новий пароль для Людмили (від 8 символів)" autocomplete="new-password">
+      <button class="btn" type="submit">Зберегти пароль</button>
+    </form>
+  </details>
+
+  <details class="panel" open>
+    <summary>Історія змін</summary>
+    <ul class="moves" id="moves"></ul>
+  </details>
+</div>
+
+<script>
+(() => {
+  const API = 'https://abrgippumkwgraisdgui.supabase.co/functions/v1/luxwaffle-stock';
+  const $ = (s, r = document) => r.querySelector(s);
+  const login = $('#login'), app = $('#app'), loginMsg = $('#login-msg');
+  const DOT = { 'Білий': '#f4f1ea', 'Сірий': '#a9a8a4', 'Капучино': '#b89a7c', 'Теракот': '#c0603f', 'Чорний': '#232323', 'Лаванда': '#b9a8d8', 'Бузок': '#9f7fb2', 'Лимонний': '#ecd96a', 'Морська хвиля': '#3f8f8c', 'Антрацит': '#4a4d52', 'Манго': '#f2a541', 'Ментол': '#9fd8c4' };
+  const WHO = { tanya: 'Ви: Таня (склад продавця)', liudmyla: 'Ви: Людмила (виробник)' };
+  const KIND = { count: 'інвентаризація', delivery: 'поставка', shipment: 'відправка клієнту', return: 'повернення (відмова)' };
+  const LOC = { tanya: 'Таня', liudmyla: 'Людмила' };
+  let pass = '', st = null, busy = false;
+
+  const rd = k => { try { return sessionStorage.getItem(k) || localStorage.getItem(k) || ''; } catch (_) { return ''; } };
+  const wr = (k, v, persist) => { try { sessionStorage.setItem(k, v); if (persist) localStorage.setItem(k, v); } catch (_) {} };
+  const clr = k => { try { sessionStorage.removeItem(k); localStorage.removeItem(k); } catch (_) {} };
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const fmt = iso => new Date(iso).toLocaleString('uk-UA', { timeZone: 'Europe/Kyiv', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  let toastT; const toast = msg => { let t = $('.toast'); if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); } t.textContent = msg; clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 2800); };
+  const errText = e => ({ auth: 'Невірний пароль.', locked: 'Забагато невдалих спроб. Зачекайте 15 хвилин.', db: 'База не відповіла. Спробуйте ще раз.', forbidden: 'Цей склад редагує інша людина.', invalid: 'Перевірте числа.', short: 'Пароль має бути від 8 символів.', same: 'Пароль Людмили має відрізнятися від пароля адмінки.' }[e] || 'Щось пішло не так. Спробуйте «Оновити».');
+
+  const api = async body => {
+    const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pass, ...body }) });
+    const d = await r.json().catch(() => ({ ok: false, error: 'json' }));
+    if (r.status === 401) d.error = 'auth'; if (r.status === 429) d.error = 'locked';
+    return d;
+  };
+  const need = r => Math.max(0, r.pending - Math.max(0, r.tanya) - Math.max(0, r.liudmyla));
+  const shortT = r => Math.max(0, r.pending - Math.max(0, r.tanya));
+
+  const render = () => {
+    const rows = st.rows, me = st.role;
+    $('#who').textContent = WHO[me];
+    $('#to-admin').hidden = me !== 'tanya';
+    const sum = f => rows.reduce((s, r) => s + f(r), 0);
+    const t = (l, v, hot) => `<div class="tile${hot ? ' hot' : ''}"><b>${v}</b><span>${l}</span></div>`;
+    $('#tiles').innerHTML = [
+      t('Треба пошити', sum(need), sum(need) > 0),
+      t('Не відправлено клієнтам', sum(r => r.pending)),
+      t('На складі у Тані', sum(r => r.tanya)),
+      t('На складі у Людмили', sum(r => r.liudmyla)),
+      t('Продано за 7 днів', sum(r => r.sold7)),
+    ].join('');
+    const notCounted = ['tanya', 'liudmyla'].filter(l => !rows.some(r => r[l + '_counted']));
+    $('#hint').hidden = !notCounted.length;
+    $('#hint').textContent = notCounted.length ? `Склад ${notCounted.map(l => LOC[l] === 'Таня' ? 'Тані' : 'Людмили').join(' і ')} ще не пораховано: впишіть поточні залишки по кожному кольору. ${notCounted.includes(me) ? 'Ваші поля підсвічені.' : ''}` : '';
+
+    $('#grid').innerHTML = rows.map(r => {
+      const n = need(r), sh = shortT(r);
+      const cell = loc => {
+        const mine = loc === me, v = r[loc];
+        return `<div class="stock${mine ? ' mine' : ''}"><label for="${mine ? `in-${esc(r.color)}` : ''}">У ${loc === 'tanya' ? 'Тані' : 'Людмили'}</label>
+          ${mine ? `<input id="in-${esc(r.color)}" type="number" min="0" step="1" inputmode="numeric" value="${v}" data-color="${esc(r.color)}" data-loc="${loc}" aria-label="Залишок ${esc(r.color)} у ${LOC[loc]}">`
+                 : `<div class="val${v < 0 ? ' neg' : ''}">${v}</div>`}
+          ${loc === 'tanya' && sh > 0 ? `<div class="short">не вистачає ${sh}</div>` : ''}</div>`;
+      };
+      return `<article class="card">
+        <div class="card__top"><span class="dot" style="background:${DOT[r.color] || '#ccc'}" aria-hidden="true"></span><span class="card__name">${esc(r.color)}</span>
+          <div class="need${n ? ' hot' : ' zero'}"><b>${n}</b><small>треба пошити</small></div></div>
+        <div class="stats"><span>Не відправлено: <b>${r.pending}</b></span><span>Продано 7 дн: <b>${r.sold7}</b></span><span>30 дн: <b>${r.sold30}</b></span></div>
+        <div class="stocks">${cell('tanya')}${cell('liudmyla')}</div>
+      </article>`;
+    }).join('');
+
+    if (!$('#dgrid').childElementCount) $('#dgrid').innerHTML = st.catalog.map(c => `<label><span class="dot" style="width:14px;height:14px;background:${DOT[c] || '#ccc'}" aria-hidden="true"></span><span>${esc(c)}</span><input type="number" min="0" step="1" inputmode="numeric" placeholder="0" data-color="${esc(c)}" aria-label="Поставка ${esc(c)}"></label>`).join('');
+
+    $('#sp-panel').hidden = me !== 'tanya';
+    $('#sp-state').textContent = st.supplier_pass_set ? 'Пароль для Людмили вже задано. Можна змінити: старий перестане працювати.' : 'Пароль для Людмили ще не задано. Придумайте його і передайте їй разом із посиланням luxwaffle.in.ua/sklad/';
+
+    $('#moves').innerHTML = st.moves.length ? st.moves.map(m => `<li><span class="when">${fmt(m.created_at)}</span><span>${esc(LOC[m.location])}</span><span>${esc(m.color)}</span><span class="d ${m.delta >= 0 ? 'plus' : 'minus'}">${m.delta > 0 ? '+' : ''}${m.delta}</span><span class="sub">${esc(KIND[m.kind] || m.kind)}${m.actor && m.actor !== 'auto' ? ' · ' + esc(m.actor) : ''}${m.note ? ' · ' + esc(m.note) : ''}</span></li>`).join('') : '<li class="sub">Ще немає записів.</li>';
+  };
+
+  const apply = d => { if (d.ok) { st = d; render(); return true; } if (d.error === 'auth' || d.error === 'locked') { logout(errText(d.error)); return false; } toast(errText(d.error)); return false; };
+  const load = async () => apply(await api({ action: 'state' }).catch(() => ({ ok: false, error: 'net' })));
+
+  $('#grid').addEventListener('change', async e => {
+    const i = e.target.closest('input[data-loc]'); if (!i || busy) return;
+    const qty = Number(i.value);
+    if (!Number.isInteger(qty) || qty < 0) { toast('Введіть ціле число від 0'); return; }
+    busy = true; i.disabled = true;
+    const ok = apply(await api({ action: 'count', location: i.dataset.loc, color: i.dataset.color, qty }).catch(() => ({ ok: false, error: 'net' })));
+    busy = false; if (ok) toast(`${i.dataset.color}: збережено ${qty}`);
+  });
+
+  $('#delivery-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const items = [...document.querySelectorAll('#dgrid input')].map(i => [i.dataset.color, Number(i.value) || 0]).filter(x => x[1] > 0);
+    if (!items.length) { toast('Впишіть кількість хоча б для одного кольору'); return; }
+    const total = items.reduce((s, x) => s + x[1], 0);
+    if (!confirm(`Записати поставку ${total} компл. від Людмили Тані?`)) return;
+    const ok = apply(await api({ action: 'delivery', items, note: $('#d-note').value.trim() }).catch(() => ({ ok: false, error: 'net' })));
+    if (ok) { document.querySelectorAll('#dgrid input').forEach(i => { i.value = ''; }); $('#d-note').value = ''; $('#delivery').open = false; toast(`Поставку ${total} компл. записано`); }
+  });
+
+  $('#sp-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const ok = apply(await api({ action: 'supplier_pass', new_pass: $('#sp-pass').value }).catch(() => ({ ok: false, error: 'net' })));
+    if (ok) { $('#sp-pass').value = ''; toast('Пароль для Людмили збережено'); }
+  });
+
+  const logout = msg => { pass = ''; st = null; clr('lw_sklad'); app.hidden = true; login.hidden = false; loginMsg.textContent = msg || ''; $('#pass').value = ''; $('#pass').focus(); };
+  login.addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = $('#login-btn'); btn.disabled = true; loginMsg.textContent = '';
+    pass = $('#pass').value;
+    const d = await api({ action: 'state' }).catch(() => ({ ok: false, error: 'net' }));
+    btn.disabled = false;
+    if (!d.ok) { pass = ''; loginMsg.textContent = errText(d.error); return; }
+    wr('lw_sklad', pass, $('#remember').checked);
+    login.hidden = true; app.hidden = false; st = d; render();
+  });
+  $('#refresh').addEventListener('click', load);
+  $('#logout').addEventListener('click', () => logout(''));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && pass && !busy) load(); });
+
+  pass = rd('lw_sklad') || rd('lw_admin');
+  if (pass) { login.hidden = true; app.hidden = false; load(); } else $('#pass').focus();
+})();
+</script>
+</body>
+</html>
