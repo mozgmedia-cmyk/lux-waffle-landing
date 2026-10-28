@@ -52,14 +52,18 @@ h2 { font-size: 1.05rem; margin: 0 }
 .need.zero b { color: var(--ok) }
 .stats { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .86rem; color: var(--muted) }
 .stats b { color: var(--fg); font-variant-numeric: tabular-nums }
-.stocks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
+.stocks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px }
 .stock { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; display: grid; gap: 4px }
-.stock label { font-size: .76rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em }
+.stock label { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em }
 .stock .val { font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums }
 .stock .val.neg { color: var(--bad) }
 .stock input { width: 100%; border: 1px solid var(--line); background: var(--bg); color: var(--fg); border-radius: 8px; padding: 6px 8px; font: inherit; font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums }
 .stock .short { font-size: .76rem; color: var(--warn) }
 .stock.mine { border-color: var(--accent) }
+.stock.fab { background: color-mix(in srgb, var(--info-bg) 55%, transparent) }
+.fabline { font-size: .84rem; color: var(--muted) }
+.fabline b { color: var(--fg); font-variant-numeric: tabular-nums }
+.fabline .lack { color: var(--warn); font-weight: 600 }
 details.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px }
 details.panel summary { cursor: pointer; font-weight: 700 }
 details.panel[open] summary { margin-bottom: 10px }
@@ -109,7 +113,7 @@ details.panel[open] summary { margin-bottom: 10px }
 
   <section class="tiles" id="tiles" aria-label="Підсумок"></section>
   <div class="note" id="hint" hidden></div>
-  <p class="sub">Рахуємо в комплектах (великий + малий рушник). «Треба пошити» = невідправлені замовлення − склад у Тані − склад у Людмили.</p>
+  <p class="sub">Рахуємо в комплектах (великий + малий рушник). «Треба пошити» = невідправлені замовлення − склад у Тані − пошите у Людмили. Тканина — у погонних метрах (полотно 1 м × 1,8 м): з 1 метра виходить 1 комплект.</p>
   <section class="grid" id="grid"></section>
 
   <details class="panel" id="delivery">
@@ -144,7 +148,8 @@ details.panel[open] summary { margin-bottom: 10px }
   const DOT = { 'Білий': '#f4f1ea', 'Сірий': '#a9a8a4', 'Капучино': '#b89a7c', 'Теракот': '#c0603f', 'Чорний': '#232323', 'Лаванда': '#b9a8d8', 'Бузок': '#9f7fb2', 'Лимонний': '#ecd96a', 'Морська хвиля': '#3f8f8c', 'Антрацит': '#4a4d52', 'Манго': '#f2a541', 'Ментол': '#9fd8c4' };
   const WHO = { tanya: 'Ви: Таня (склад продавця)', liudmyla: 'Ви: Людмила (виробник)' };
   const KIND = { count: 'інвентаризація', delivery: 'поставка', shipment: 'відправка клієнту', return: 'повернення (відмова)' };
-  const LOC = { tanya: 'Таня', liudmyla: 'Людмила' };
+  const LOC = { tanya: 'Таня', liudmyla: 'Людмила', fabric: 'Людмила · тканина' };
+  const m2 = v => (Math.round(Number(v) * 100) / 100).toLocaleString('uk-UA', { maximumFractionDigits: 2 });
   let pass = '', st = null, busy = false;
 
   const rd = k => { try { return sessionStorage.getItem(k) || localStorage.getItem(k) || ''; } catch (_) { return ''; } };
@@ -174,27 +179,33 @@ details.panel[open] summary { margin-bottom: 10px }
       t('Треба пошити', sum(need), sum(need) > 0),
       t('Не відправлено клієнтам', sum(r => r.pending)),
       t('На складі у Тані', sum(r => r.tanya)),
-      t('На складі у Людмили', sum(r => r.liudmyla)),
+      t('Пошито у Людмили', sum(r => r.liudmyla)),
+      t('Тканини у Людмили, м', m2(sum(r => r.fabric))),
       t('Продано за 7 днів', sum(r => r.sold7)),
     ].join('');
-    const notCounted = ['tanya', 'liudmyla'].filter(l => !rows.some(r => r[l + '_counted']));
+    const notCounted = ['tanya', 'liudmyla', 'fabric'].filter(l => !rows.some(r => r[l + '_counted']));
+    const NC = { tanya: 'склад Тані', liudmyla: 'пошиті комплекти Людмили', fabric: 'тканину Людмили' };
+    const mineNC = notCounted.some(l => l === me || (l === 'fabric' && me === 'liudmyla'));
     $('#hint').hidden = !notCounted.length;
-    $('#hint').textContent = notCounted.length ? `Склад ${notCounted.map(l => LOC[l] === 'Таня' ? 'Тані' : 'Людмили').join(' і ')} ще не пораховано: впишіть поточні залишки по кожному кольору. ${notCounted.includes(me) ? 'Ваші поля підсвічені.' : ''}` : '';
+    $('#hint').textContent = notCounted.length ? `Ще не внесено: ${notCounted.map(l => NC[l]).join(', ')}. Впишіть поточні залишки по кожному кольору. ${mineNC ? 'Ваші поля підсвічені.' : ''}` : '';
 
     $('#grid').innerHTML = rows.map(r => {
       const n = need(r), sh = shortT(r);
+      const LBL = { tanya: 'У Тані, компл.', liudmyla: 'Пошито, компл.', fabric: 'Тканина, м' };
       const cell = loc => {
-        const mine = loc === me, v = r[loc];
-        return `<div class="stock${mine ? ' mine' : ''}"><label for="${mine ? `in-${esc(r.color)}` : ''}">У ${loc === 'tanya' ? 'Тані' : 'Людмили'}</label>
-          ${mine ? `<input id="in-${esc(r.color)}" type="number" min="0" step="1" inputmode="numeric" value="${v}" data-color="${esc(r.color)}" data-loc="${loc}" aria-label="Залишок ${esc(r.color)} у ${LOC[loc]}">`
-                 : `<div class="val${v < 0 ? ' neg' : ''}">${v}</div>`}
+        const mine = loc === me || (loc === 'fabric' && me === 'liudmyla'), v = r[loc], fab = loc === 'fabric', id = `in-${loc}-${esc(r.color)}`;
+        return `<div class="stock${mine ? ' mine' : ''}${fab ? ' fab' : ''}"><label for="${mine ? id : ''}">${LBL[loc]}</label>
+          ${mine ? `<input id="${id}" ${fab ? 'type="text" inputmode="decimal" autocomplete="off"' : 'type="number" min="0" step="1" inputmode="numeric"'} value="${fab ? m2(v).replace(/\s/g, '') : v}" data-color="${esc(r.color)}" data-loc="${loc}" aria-label="${LBL[loc]}: ${esc(r.color)}">`
+                 : `<div class="val${v < 0 ? ' neg' : ''}">${fab ? m2(v) : v}</div>`}
           ${loc === 'tanya' && sh > 0 ? `<div class="short">не вистачає ${sh}</div>` : ''}</div>`;
       };
+      const canSew = Math.floor(Math.max(0, r.fabric)), lackM = Math.max(0, n - canSew);
       return `<article class="card">
         <div class="card__top"><span class="dot" style="background:${DOT[r.color] || '#ccc'}" aria-hidden="true"></span><span class="card__name">${esc(r.color)}</span>
           <div class="need${n ? ' hot' : ' zero'}"><b>${n}</b><small>треба пошити</small></div></div>
         <div class="stats"><span>Не відправлено: <b>${r.pending}</b></span><span>Продано 7 дн: <b>${r.sold7}</b></span><span>30 дн: <b>${r.sold30}</b></span></div>
-        <div class="stocks">${cell('tanya')}${cell('liudmyla')}</div>
+        <div class="stocks">${cell('tanya')}${cell('liudmyla')}${cell('fabric')}</div>
+        <div class="fabline">З тканини можна пошити: <b>${canSew}</b> компл.${lackM ? ` · <span class="lack">не вистачає тканини ${lackM} м</span>` : ''}</div>
       </article>`;
     }).join('');
 
@@ -203,7 +214,7 @@ details.panel[open] summary { margin-bottom: 10px }
     $('#sp-panel').hidden = me !== 'tanya';
     $('#sp-state').textContent = st.supplier_pass_set ? 'Пароль для Людмили вже задано. Можна змінити: старий перестане працювати.' : 'Пароль для Людмили ще не задано. Придумайте його і передайте їй разом із посиланням luxwaffle.in.ua/sklad/';
 
-    $('#moves').innerHTML = st.moves.length ? st.moves.map(m => `<li><span class="when">${fmt(m.created_at)}</span><span>${esc(LOC[m.location])}</span><span>${esc(m.color)}</span><span class="d ${m.delta >= 0 ? 'plus' : 'minus'}">${m.delta > 0 ? '+' : ''}${m.delta}</span><span class="sub">${esc(KIND[m.kind] || m.kind)}${m.actor && m.actor !== 'auto' ? ' · ' + esc(m.actor) : ''}${m.note ? ' · ' + esc(m.note) : ''}</span></li>`).join('') : '<li class="sub">Ще немає записів.</li>';
+    $('#moves').innerHTML = st.moves.length ? st.moves.map(m => `<li><span class="when">${fmt(m.created_at)}</span><span>${esc(LOC[m.location])}</span><span>${esc(m.color)}</span><span class="d ${m.delta >= 0 ? 'plus' : 'minus'}">${m.delta > 0 ? '+' : ''}${m.location === 'fabric' ? m2(m.delta) + ' м' : m.delta}</span><span class="sub">${esc(KIND[m.kind] || m.kind)}${m.actor && m.actor !== 'auto' ? ' · ' + esc(m.actor) : ''}${m.note ? ' · ' + esc(m.note) : ''}</span></li>`).join('') : '<li class="sub">Ще немає записів.</li>';
   };
 
   const apply = d => { if (d.ok) { st = d; render(); return true; } if (d.error === 'auth' || d.error === 'locked') { logout(errText(d.error)); return false; } toast(errText(d.error)); return false; };
@@ -211,11 +222,13 @@ details.panel[open] summary { margin-bottom: 10px }
 
   $('#grid').addEventListener('change', async e => {
     const i = e.target.closest('input[data-loc]'); if (!i || busy) return;
-    const qty = Number(i.value);
-    if (!Number.isInteger(qty) || qty < 0) { toast('Введіть ціле число від 0'); return; }
+    const fab = i.dataset.loc === 'fabric', raw = String(i.value).trim().replace(/\s/g, '').replace(',', '.');
+    if (raw === '') { toast('Поле порожнє — нічого не змінено'); render(); return; }
+    const qty = Number(raw);
+    if (!Number.isFinite(qty) || qty < 0 || (!fab && !Number.isInteger(qty))) { toast(fab ? 'Введіть метри, наприклад 12,5' : 'Введіть ціле число від 0'); return; }
     busy = true; i.disabled = true;
     const ok = apply(await api({ action: 'count', location: i.dataset.loc, color: i.dataset.color, qty }).catch(() => ({ ok: false, error: 'net' })));
-    busy = false; if (ok) toast(`${i.dataset.color}: збережено ${qty}`);
+    busy = false; if (ok) toast(`${i.dataset.color}: збережено ${fab ? m2(qty) + ' м тканини' : qty + ' компл.'}`);
   });
 
   $('#delivery-form').addEventListener('submit', async e => {
