@@ -308,3 +308,11 @@ button.swatch__img:focus-visible { outline:2px solid var(--accent-500); outline-
 .lb__add { min-height:48px; padding:0 var(--sp-4); white-space:nowrap; flex:none; }
 @media (hover:hover) and (min-width:768px){ .lb__nav { display:grid; } }
 @media (prefers-reduced-motion:reduce){ .lb__img.is-anim { transition:none; } }
+
+/* discount info on every colour card: badge on the photo, struck old price + new price pill */
+.swatch__badge { position:absolute; top:8px; right:8px; padding:4px 10px; border-radius:var(--r-pill); background:var(--accent-500); color:#fff; font-weight:700; font-size:.875rem; line-height:1.3; font-variant-numeric:tabular-nums; box-shadow:0 1px 4px rgba(42,37,34,.18); }
+.swatch__prices { flex:1 0 100%; display:flex; align-items:center; flex-wrap:wrap; gap:4px 6px; }
+.swatch__old { color:var(--ink-500); font-size:.8125rem; text-decoration:line-through; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.swatch__price { padding:3px 8px; border-radius:var(--r-pill); background:var(--accent-100); color:var(--ink-900); white-space:nowrap; }
+.swatch .qty { width:100%; justify-content:space-between; }
+.lb__meta s { color:rgba(255,255,255,.6); }

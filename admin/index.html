@@ -172,12 +172,13 @@ h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
   const $ = (s, r = document) => r.querySelector(s);
   const unmatchedEl = $('#unmatched'), login = $('#login'), app = $('#app'), list = $('#list'), state = $('#state'), tiles = $('#tiles'), fresh = $('#fresh'), loginMsg = $('#login-msg');
   let orders = [], ads = null, np = null, npBusy = false, filter = 'all', query = '', pass = '', busy = new Set();
-  const PRICE = 950;
+  const PRICE = 1070;
   // Собівартість комплекту за датою замовлення (Київ): до 16.10 — 450 ₴, з 16.10 — 500 ₴. Список приходить із сервера (admin_settings.cost_tiers).
   let costTiers = [{ from: '2026-10-09', cost: 450 }, { from: '2026-10-16', cost: 500 }];
   const kyivDate = iso => new Date(iso).toLocaleDateString('en-CA', { timeZone: 'Europe/Kyiv' });
   const costOf = o => { const d = kyivDate(o.created_at); let c = costTiers[0].cost; for (const t of costTiers) if (d >= t.from) c = t.cost; return c; };
-  const marginOf = o => (+o.sets || 0) * (PRICE - costOf(o));
+  // Маржа — від суми самого замовлення: ціна змінювалась (950 ₴ до 03.11.2026, далі 1070 ₴), старі замовлення не перераховуються.
+  const marginOf = o => (+o.total || (+o.sets || 0) * PRICE) - (+o.sets || 0) * costOf(o);
   const uah = n => (Math.round(n) || 0).toLocaleString('uk-UA') + ' ₴';
 
   const rd = (k) => { try { return sessionStorage.getItem(k) || localStorage.getItem(k) || ''; } catch (_) { return ''; } };

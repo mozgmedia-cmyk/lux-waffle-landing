@@ -1,7 +1,7 @@
 (() => {
-  const PRICE = 950, COLORS = window.COLORS, qty = COLORS.map(() => 0);
+  const PRICE = 1070, COLORS = window.COLORS, qty = COLORS.map(() => 0);
   const $ = s => document.querySelector(s);
-  const fmt = n => n.toLocaleString('uk-UA').replace(/ /g, ' ') + ' грн';
+  const fmt = n => (n < 10000 ? String(n) : n.toLocaleString('uk-UA').replace(/ /g, ' ')) + ' грн';
   const sets = () => qty.reduce((s, q) => s + q, 0);
   /* ---------- ad attribution (UTM / fbclid), kept 30 days: localStorage + cookie + sessionStorage ---------- */
   const ATTR_KEY = 'lw_attr', FIRST_KEY = 'lw_first', DAY = 864e5;
@@ -62,8 +62,8 @@
     };
     window.addEventListener('scroll', onScroll, { passive: true });
   })();
-  fbTrack('ViewContent', { content_name: 'Waffle towel set', content_type: 'product', value: 950, currency: 'UAH' });
-  ttTrack('ViewContent', { content_name: 'Waffle towel set', content_type: 'product', value: 950, currency: 'UAH' });
+  fbTrack('ViewContent', { content_name: 'Waffle towel set', content_type: 'product', value: PRICE, currency: 'UAH' });
+  ttTrack('ViewContent', { content_name: 'Waffle towel set', content_type: 'product', value: PRICE, currency: 'UAH' });
 
   /* ---------- server-side visit log: keeps the landing URL (UTM/fbclid) even if the browser drops storage ---------- */
   (function logVisit() {
@@ -100,7 +100,7 @@
     const b = e.target.closest('button[data-d]'); if (!b) return;
     const card = b.closest('.swatch'), i = +card.dataset.i;
     qty[i] = Math.max(0, Math.min(20, qty[i] + +b.dataset.d));
-    if (qty[i] > 0 && +b.dataset.d > 0) trackOnce('AddToCart', { content_name: COLORS[i], value: 950, currency: 'UAH' }); if (!once['tt:atc']) { once['tt:atc'] = 1; ttTrack('AddToCart', { content_name: COLORS[i], value: 950, currency: 'UAH' }); }
+    if (qty[i] > 0 && +b.dataset.d > 0) trackOnce('AddToCart', { content_name: COLORS[i], value: PRICE, currency: 'UAH' }); if (!once['tt:atc']) { once['tt:atc'] = 1; ttTrack('AddToCart', { content_name: COLORS[i], value: PRICE, currency: 'UAH' }); }
     if (qty[i] > 0 && +b.dataset.d > 0) evtOnce('ColorSelected', { color: COLORS[i] });
     card.querySelector('output').textContent = qty[i];
     card.classList.toggle('is-selected', qty[i] > 0);
@@ -212,7 +212,7 @@
   }
   render();
 
-  $('#form').addEventListener('focusin', () => { trackOnce('InitiateCheckout', { value: sets() * 950, currency: 'UAH', num_items: sets() }); ttTrack('InitiateCheckout', { value: sets() * 950, currency: 'UAH' }); }, { once: true });
+  $('#form').addEventListener('focusin', () => { trackOnce('InitiateCheckout', { value: sets() * PRICE, currency: 'UAH', num_items: sets() }); ttTrack('InitiateCheckout', { value: sets() * PRICE, currency: 'UAH' }); }, { once: true });
   $('#form').addEventListener('focusin', e => {
     const id = e.target && e.target.id; if (!id) return;
     evtOnce('FormStarted');
@@ -388,7 +388,7 @@
       utm: readAttr() || {}, first: readFirst() || {}, layout: LAYOUT,
       fbp: readCookie('_fbp'), fbc: readCookie('_fbc'),
     };
-    const leadValue = sets() * 950, leadSets = sets();
+    const leadValue = sets() * PRICE, leadSets = sets();
     sending = true; btn.disabled = true; btn.setAttribute('aria-busy', 'true'); const label = btn.textContent; btn.textContent = 'Надсилаємо…';
     try {
       const r = await fetch(ORDER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(order) });
