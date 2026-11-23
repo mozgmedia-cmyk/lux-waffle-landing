@@ -179,8 +179,8 @@ h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
   const costOf = o => { const d = kyivDate(o.created_at); let c = costTiers[0].cost; for (const t of costTiers) if (d >= t.from) c = t.cost; return c; };
   // Маржа — від суми самого замовлення: ціна змінювалась (950 ₴ до 03.11.2026, далі 1070 ₴), старі замовлення не перераховуються.
   // Кухонні рушнички (пара 40×60, 236 ₴, з 23.11.2026): позиції «Кухонні: …», у orders.sets не входять.
-  // Собівартість пари ще не задана власником — поки маржа кухонних рахується без неї.
-  const KITCHEN_COST = null;
+  // Собівартість пари кухонних — 110 ₴ (власник, 23.11.2026).
+  const KITCHEN_COST = 110;
   const kitchenOf = o => Array.isArray(o.items) ? o.items.reduce((s, [n, q]) => s + (String(n).startsWith('Кухонні:') ? +q || 0 : 0), 0) : 0;
   const marginOf = o => (+o.total || (+o.sets || 0) * PRICE) - (+o.sets || 0) * costOf(o) - kitchenOf(o) * (KITCHEN_COST || 0);
   const uah = n => (Math.round(n) || 0).toLocaleString('uk-UA') + ' ₴';
