@@ -1,8 +1,9 @@
 (() => {
-  const PRICE = 1070, COLORS = window.COLORS, qty = COLORS.map(() => 0);
+  const PRICE = 1070, P = window.PRODUCTS, qty = P.map(() => 0);
   const $ = s => document.querySelector(s);
   const fmt = n => (n < 10000 ? String(n) : n.toLocaleString('uk-UA').replace(/ /g, ' ')) + ' грн';
-  const sets = () => qty.reduce((s, q) => s + q, 0);
+  const sets = () => qty.reduce((s, q) => s + q, 0);                 // усі позиції (комплекти + пари кухонних)
+  const total = () => qty.reduce((s, q, i) => s + q * P[i].price, 0);
   /* ---------- ad attribution (UTM / fbclid), kept 30 days: localStorage + cookie + sessionStorage ---------- */
   const ATTR_KEY = 'lw_attr', FIRST_KEY = 'lw_first', DAY = 864e5;
   const readCookie = n => { try { const m = document.cookie.match(new RegExp('(?:^|; )' + n + '=([^;]*)')); return m ? decodeURIComponent(m[1]) : ''; } catch (_) { return ''; } };
@@ -100,8 +101,8 @@
     const b = e.target.closest('button[data-d]'); if (!b) return;
     const card = b.closest('.swatch'), i = +card.dataset.i;
     qty[i] = Math.max(0, Math.min(20, qty[i] + +b.dataset.d));
-    if (qty[i] > 0 && +b.dataset.d > 0) trackOnce('AddToCart', { content_name: COLORS[i], value: PRICE, currency: 'UAH' }); if (!once['tt:atc']) { once['tt:atc'] = 1; ttTrack('AddToCart', { content_name: COLORS[i], value: PRICE, currency: 'UAH' }); }
-    if (qty[i] > 0 && +b.dataset.d > 0) evtOnce('ColorSelected', { color: COLORS[i] });
+    if (qty[i] > 0 && +b.dataset.d > 0) trackOnce('AddToCart', { content_name: P[i].id, value: P[i].price, currency: 'UAH' }); if (!once['tt:atc']) { once['tt:atc'] = 1; ttTrack('AddToCart', { content_name: P[i].id, value: P[i].price, currency: 'UAH' }); }
+    if (qty[i] > 0 && +b.dataset.d > 0) evtOnce('ColorSelected', { color: P[i].id });
     card.querySelector('output').textContent = qty[i];
     card.classList.toggle('is-selected', qty[i] > 0);
     render();
@@ -121,23 +122,24 @@
       tx = Math.min(mx, Math.max(-mx, tx)); ty = Math.min(my, Math.max(-my, ty));
     };
     const reset = anim => { s = 1; tx = 0; ty = 0; apply(anim); };
-    const syncAdd = () => { const q = qty[cur]; addBtn.textContent = q ? `У замовленні: ${q} ✓  +1` : 'Додати в замовлення'; };
+    const syncAdd = () => { const q = qty[+cards[cur].dataset.i]; addBtn.textContent = q ? `У замовленні: ${q} ✓  +1` : 'Додати в замовлення'; };
     function show(i) {
       cur = (i + cards.length) % cards.length;
       const b = cards[cur].querySelector('.swatch__img'), thumb = b.querySelector('img');
       reset(false); img.style.opacity = '1';
       img.src = thumb.currentSrc || thumb.src;                       // instant: the already loaded thumbnail
-      img.alt = 'Вафельні рушники, колір ' + COLORS[cur].toLowerCase();
+      img.alt = P[+cards[cur].dataset.i].alt;
       const hi = new Image(), url = b.dataset.full + (webp ? '.webp' : '.jpg'), want = cur;
       hi.onload = () => { if (want === cur && opened) img.src = url; }; hi.src = url;   // then the 1600px version for details
-      $('#lb-name').textContent = COLORS[cur]; $('#lb-count').textContent = `${cur + 1} / ${cards.length}`;
+      const pr = P[+cards[cur].dataset.i]; $('#lb-name').textContent = pr.name;
+      $('#lb-meta').innerHTML = `${pr.meta} · <s>${pr.old} грн</s> <strong>${pr.price} грн</strong>`; $('#lb-count').textContent = `${cur + 1} / ${cards.length}`;
       syncAdd();
     }
     function open(i) {
       show(i); lb.showModal(); opened = true; document.documentElement.style.overflow = 'hidden';
       try { history.pushState({ lb: 1 }, ''); } catch (_) {}
       hint.classList.remove('is-hidden'); clearTimeout(hintTimer); hintTimer = setTimeout(() => hint.classList.add('is-hidden'), 3500);
-      evtOnce('PhotoZoom', { color: COLORS[i] });
+      evtOnce('PhotoZoom', { color: P[+cards[cur].dataset.i].id });
     }
     function close(fromHistory) {
       if (!opened) return; opened = false; lb.close(); document.documentElement.style.overflow = '';
@@ -150,7 +152,7 @@
     $('#lb-next').addEventListener('click', () => show(cur + 1));
     lb.addEventListener('keydown', e => { if (e.key === 'ArrowLeft') show(cur - 1); else if (e.key === 'ArrowRight') show(cur + 1); });
     addBtn.addEventListener('click', () => { cards[cur].querySelector('button[data-d="1"]').click(); syncAdd(); });
-    $('#swatches').addEventListener('click', e => { const b = e.target.closest('.swatch__img'); if (b) open(+b.closest('.swatch').dataset.i); });
+    $('#swatches').addEventListener('click', e => { const b = e.target.closest('.swatch__img'); if (b) open(cards.indexOf(b.closest('.swatch'))); });
 
     // gestures (pointer events): 2 fingers = pinch, 1 finger = pan when zoomed / swipe when not
     const pts = new Map(); let g = null, lastTap = 0, lastX = 0, lastY = 0;
@@ -201,18 +203,18 @@
   })();
 
   function render() {
-    const items = COLORS.map((n, i) => [n, qty[i]]).filter(x => x[1] > 0), n = sets();
+    const items = P.map((p, i) => [p, qty[i]]).filter(x => x[1] > 0), n = sets(), sum = total();
     $('#lines').innerHTML = items.length
-      ? items.map(([c, q]) => `<div class="summary__line"><span>${c} · ${q} ${plural(q, 'комплект', 'комплекти', 'комплектів')}</span><span>${fmt(q * PRICE)}</span></div>`).join('')
+      ? items.map(([p, q]) => `<div class="summary__line"><span>${p.kind === 'kitchen' ? 'Кухонні: ' : ''}${p.name} · ${q} ${plural(q, ...p.unit)}</span><span>${fmt(q * p.price)}</span></div>`).join('')
         + `<div class="summary__line"><span>Усього рушників</span><span>${n * 2}</span></div>`
       : '<p class="summary__empty">Ще нічого не обрано. <a href="#swatches">Обрати колір</a></p>';
-    $('#total').textContent = fmt(n * PRICE);
-    const label = n ? `Замовити за ${fmt(n * PRICE)} →` : 'Замовити';
+    $('#total').textContent = fmt(sum);
+    const label = n ? `Замовити за ${fmt(sum)} →` : 'Замовити';
     $('#submit').textContent = label; $('#stickyBtn').textContent = label;
   }
   render();
 
-  $('#form').addEventListener('focusin', () => { trackOnce('InitiateCheckout', { value: sets() * PRICE, currency: 'UAH', num_items: sets() }); ttTrack('InitiateCheckout', { value: sets() * PRICE, currency: 'UAH' }); }, { once: true });
+  $('#form').addEventListener('focusin', () => { trackOnce('InitiateCheckout', { value: total(), currency: 'UAH', num_items: sets() }); ttTrack('InitiateCheckout', { value: total(), currency: 'UAH' }); }, { once: true });
   $('#form').addEventListener('focusin', e => {
     const id = e.target && e.target.id; if (!id) return;
     evtOnce('FormStarted');
@@ -383,12 +385,12 @@
       name: $('#f-name').value.trim(), phone: $('#f-phone').value.trim(),
       city: state.city && state.city.label || cityIn.value.trim(),
       warehouse: whIn.value.trim(),
-      items: COLORS.map((n, i) => [n, qty[i]]).filter(x => x[1]),
+      items: P.map((p, i) => [p.id, qty[i]]).filter(x => x[1]),
       website: $('#f-website').value,
       utm: readAttr() || {}, first: readFirst() || {}, layout: LAYOUT,
       fbp: readCookie('_fbp'), fbc: readCookie('_fbc'),
     };
-    const leadValue = sets() * PRICE, leadSets = sets();
+    const leadValue = total(), leadSets = sets();
     sending = true; btn.disabled = true; btn.setAttribute('aria-busy', 'true'); const label = btn.textContent; btn.textContent = 'Надсилаємо…';
     try {
       const r = await fetch(ORDER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(order) });

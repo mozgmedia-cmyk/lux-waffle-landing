@@ -316,3 +316,6 @@ button.swatch__img:focus-visible { outline:2px solid var(--accent-500); outline-
 .swatch__price { padding:3px 8px; border-radius:var(--r-pill); background:var(--accent-100); color:var(--ink-900); white-space:nowrap; }
 .swatch .qty { width:100%; justify-content:space-between; }
 .lb__meta s { color:rgba(255,255,255,.6); }
+/* кухонні рушнички — другий блок каталогу під банними комплектами */
+.kitchen-head { max-width:960px; margin:var(--sp-7, 40px) auto var(--sp-4); text-align:center; }
+.summary__line > span:last-child { white-space:nowrap; }

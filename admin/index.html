@@ -178,7 +178,11 @@ h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
   const kyivDate = iso => new Date(iso).toLocaleDateString('en-CA', { timeZone: 'Europe/Kyiv' });
   const costOf = o => { const d = kyivDate(o.created_at); let c = costTiers[0].cost; for (const t of costTiers) if (d >= t.from) c = t.cost; return c; };
   // Маржа — від суми самого замовлення: ціна змінювалась (950 ₴ до 03.11.2026, далі 1070 ₴), старі замовлення не перераховуються.
-  const marginOf = o => (+o.total || (+o.sets || 0) * PRICE) - (+o.sets || 0) * costOf(o);
+  // Кухонні рушнички (пара 40×60, 236 ₴, з 23.11.2026): позиції «Кухонні: …», у orders.sets не входять.
+  // Собівартість пари ще не задана власником — поки маржа кухонних рахується без неї.
+  const KITCHEN_COST = null;
+  const kitchenOf = o => Array.isArray(o.items) ? o.items.reduce((s, [n, q]) => s + (String(n).startsWith('Кухонні:') ? +q || 0 : 0), 0) : 0;
+  const marginOf = o => (+o.total || (+o.sets || 0) * PRICE) - (+o.sets || 0) * costOf(o) - kitchenOf(o) * (KITCHEN_COST || 0);
   const uah = n => (Math.round(n) || 0).toLocaleString('uk-UA') + ' ₴';
 
   const rd = (k) => { try { return sessionStorage.getItem(k) || localStorage.getItem(k) || ''; } catch (_) { return ''; } };
@@ -227,7 +231,7 @@ h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
   const renderTiles = () => {
     const paid = orders.filter(o => o.paid_at), shipped = orders.filter(o => o.shipped_at), declined = orders.filter(o => o.declined_at);
     const work = orders.filter(o => !o.paid_at && !o.declined_at);
-    const sets = r => r.reduce((s, o) => s + (+o.sets || 0), 0), money = r => r.reduce((s, o) => s + (+o.total || 0), 0);
+    const sets = r => r.reduce((s, o) => s + (+o.sets || 0), 0), kitchen = r => r.reduce((s, o) => s + kitchenOf(o), 0), money = r => r.reduce((s, o) => s + (+o.total || 0), 0);
     const decided = paid.length + declined.length, pickup = decided ? Math.round(100 * paid.length / decided) : null;
     const metaSpend = ads && ads.meta_spend != null ? ads.meta_spend : null;
     const manual = ads ? (+ads.manual_spend || 0) : 0;
@@ -239,7 +243,7 @@ h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
     const costNow = costTiers[costTiers.length - 1].cost;
     const t = (l, v, s) => `<div class="tile"><b>${v}</b><span>${l}</span>${s ? `<div class="src">${s}</div>` : ''}</div>`;
     tiles.innerHTML = [
-      t('Заявок', orders.length, `${esc(uah(money(orders)))} · ${sets(orders)} компл.`),
+      t('Заявок', orders.length, `${esc(uah(money(orders)))} · ${sets(orders)} компл.${kitchen(orders) ? ` + ${kitchen(orders)} пар кух.` : ''}`),
       t('Сплачено', paid.length, `<b>${esc(uah(money(paid)))}</b>`),
       t('Відправлено', shipped.length, esc(uah(money(shipped)))),
       t('У роботі', work.length, esc(uah(money(work)))),
@@ -299,7 +303,7 @@ h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em }
         <div style="display:grid;gap:4px;min-width:0">
           <div class="who"><b>${esc(o.name)}</b><span class="date">${fmtDate(o.created_at)}</span></div>
           <div class="meta"><span class="phone"><a href="${telHref(o.phone)}">${esc(o.phone)}</a></span><span>${esc(o.city)}</span><span>${esc(o.warehouse)}</span></div>
-          <div class="items"><span>${items}</span><span class="sum">${(+o.total || 0).toLocaleString('uk-UA')} ₴</span><span class="src">маржа ${esc(uah(marginOf(o)))} (собів. ${costOf(o)} ₴)</span></div>
+          <div class="items"><span>${items}</span><span class="sum">${(+o.total || 0).toLocaleString('uk-UA')} ₴</span><span class="src">маржа ${esc(uah(marginOf(o)))} (${+o.sets ? `собів. ${costOf(o)} ₴` : ''}${+o.sets && kitchenOf(o) ? '; ' : ''}${kitchenOf(o) ? (KITCHEN_COST == null ? 'кухонні без собів.' : `кухонні ${KITCHEN_COST} ₴/пара`) : ''})</span></div>
           <div class="src">${src}${o.utm_term ? ` · ${esc(o.utm_term)}` : ''}${o.browser_kind ? ` · ${esc(o.browser_kind)}` : ''}</div>
           ${npLine(o)}
         </div>
